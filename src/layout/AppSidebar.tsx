@@ -32,17 +32,7 @@ const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
-  },
-  {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
-  {
-    icon: <BoxIcon />,
-    name: "Properties",
-    path: "/properties",
+    path: "/",
   },
   {
     icon: <GroupIcon />,
@@ -50,58 +40,41 @@ const navItems: NavItem[] = [
     path: "/leads",
   },
   {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
-  },
-
-  {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
+    icon: <BoxIcon />,
+    name: "Properties",
+    path: "/properties",
   },
   {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  },
-  {
-    name: "Pages",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
-    ],
+    icon: <CalenderIcon />,
+    name: "Calendar",
+    path: "/calendar",
   },
 ];
 
 const othersItems: NavItem[] = [
   {
-    icon: <PieChartIcon />,
-    name: "Charts",
-    subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
-  {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts", pro: false },
-      { name: "Avatar", path: "/avatars", pro: false },
-      { name: "Badge", path: "/badge", pro: false },
-      { name: "Buttons", path: "/buttons", pro: false },
-      { name: "Images", path: "/images", pro: false },
-      { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
     icon: <PlugInIcon />,
-    name: "Authentication",
+    name: "Import & Export",
     subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
+      { name: "Google Sheets Import", path: "/import", pro: false },
+      { name: "Data Export", path: "/export", pro: false },
+    ],
+  },
+  {
+    icon: <PieChartIcon />,
+    name: "Reports",
+    subItems: [
+      { name: "Lead Analytics", path: "/reports/leads", pro: false },
+      { name: "Property Performance", path: "/reports/properties", pro: false },
+    ],
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Settings",
+    subItems: [
+      { name: "Profile", path: "/profile", pro: false },
+      { name: "Notifications", path: "/settings/notifications", pro: false },
+      { name: "Integrations", path: "/settings/integrations", pro: false },
     ],
   },
 ];
@@ -360,7 +333,7 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
+                  "CRM CORE"
                 ) : (
                   <HorizontaLDots />
                 )}
@@ -377,7 +350,7 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "Others"
+                  "TOOLS & SETTINGS"
                 ) : (
                   <HorizontaLDots />
                 )}

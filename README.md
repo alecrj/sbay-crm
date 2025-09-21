@@ -1,6 +1,6 @@
 # Shallow Bay Advisors CRM
 
-A professional, full-featured Customer Relationship Management system built specifically for commercial real estate brokers.
+A professional, full-featured Customer Relationship Management system built specifically for Shallow Bay Advisors commercial real estate business.
 
 ## 🚀 Features
 
