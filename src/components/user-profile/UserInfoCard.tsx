@@ -29,7 +29,12 @@ export default function UserInfoCard() {
         .select('key, value')
         .in('key', ['company_name', 'business_type', 'contact_email', 'contact_phone', 'company_description']);
 
-      if (error) throw error;
+      console.log('Loading company info:', { data, error }); // Debug log
+
+      if (error) {
+        console.error('Database error loading company info:', error);
+        return; // Don't throw error for database issues
+      }
 
       if (data && data.length > 0) {
         const settings = data.reduce((acc, setting) => {
@@ -38,14 +43,25 @@ export default function UserInfoCard() {
           if (key === 'contact_phone') key = 'phone';
           if (key === 'company_description') key = 'description';
 
-          acc[key] = setting.value.replace(/"/g, '');
+          // Handle both string and already-parsed values
+          let value = setting.value;
+          if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
+            value = value.slice(1, -1); // Remove quotes
+          }
+
+          acc[key] = value || '';
           return acc;
         }, {} as any);
 
+        console.log('Parsed settings:', settings); // Debug log
         setFormData(prev => ({ ...prev, ...settings }));
+      } else {
+        console.log('No company settings found, using defaults');
+        // Keep default values if no settings exist yet
       }
     } catch (error) {
-      console.error('Error loading company info:', error);
+      console.error('Unexpected error loading company info:', error);
+      // Don't break the UI for loading issues
     }
   };
 
@@ -53,15 +69,17 @@ export default function UserInfoCard() {
     setLoading(true);
     try {
       const settingsToUpdate = [
-        { key: 'company_name', value: `"${formData.company_name}"` },
-        { key: 'business_type', value: `"${formData.business_type}"` },
-        { key: 'contact_email', value: `"${formData.email}"` },
-        { key: 'contact_phone', value: `"${formData.phone}"` },
-        { key: 'company_description', value: `"${formData.description}"` }
+        { key: 'company_name', value: formData.company_name },
+        { key: 'business_type', value: formData.business_type },
+        { key: 'contact_email', value: formData.email },
+        { key: 'contact_phone', value: formData.phone },
+        { key: 'company_description', value: formData.description }
       ];
 
+      console.log('Saving settings:', settingsToUpdate); // Debug log
+
       for (const setting of settingsToUpdate) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('settings')
           .upsert({
             key: setting.key,
@@ -70,16 +88,25 @@ export default function UserInfoCard() {
             updated_at: new Date().toISOString()
           }, {
             onConflict: 'key'
-          });
+          })
+          .select();
 
-        if (error) throw error;
+        console.log('Upsert result:', { data, error }); // Debug log
+
+        if (error) {
+          console.error('Upsert error:', error);
+          throw error;
+        }
       }
 
+      // Reload the data after saving to ensure it's properly synced
+      await loadCompanyInfo();
+
       closeModal();
-      window.location.reload(); // Refresh to show updated data
+      console.log('Settings saved successfully'); // Debug log
     } catch (error) {
       console.error('Error saving company info:', error);
-      alert('Failed to save changes. Please try again.');
+      alert(`Failed to save changes: ${error.message}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -102,7 +129,7 @@ export default function UserInfoCard() {
                 Company Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Shallow Bay Advisors
+                {formData.company_name}
               </p>
             </div>
 
@@ -111,7 +138,7 @@ export default function UserInfoCard() {
                 Business Type
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Commercial Real Estate
+                {formData.business_type}
               </p>
             </div>
 
@@ -120,7 +147,7 @@ export default function UserInfoCard() {
                 Email address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                admin@shallowbayadvisors.com
+                {formData.email}
               </p>
             </div>
 
@@ -129,7 +156,7 @@ export default function UserInfoCard() {
                 Phone
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                (305) 555-0123
+                {formData.phone}
               </p>
             </div>
 
@@ -138,7 +165,7 @@ export default function UserInfoCard() {
                 Description
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Professional Commercial Real Estate Services
+                {formData.description}
               </p>
             </div>
           </div>

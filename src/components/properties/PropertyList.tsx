@@ -259,7 +259,7 @@ const PropertyList: React.FC = () => {
       <Modal
         isOpen={isOpen}
         onClose={closeModal}
-        className="max-w-4xl p-6"
+        className="max-w-7xl max-h-[90vh] p-6 overflow-hidden"
       >
         <PropertyForm
           property={selectedProperty}

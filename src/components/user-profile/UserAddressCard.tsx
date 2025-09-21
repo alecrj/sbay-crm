@@ -1,17 +1,111 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import { supabase } from "../../lib/supabase";
 
 export default function UserAddressCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
-    closeModal();
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    country: "United States",
+    city_state: "Miami, Florida",
+    service_areas: "Miami-Dade, Broward, Palm Beach",
+    license_number: "FL CRE License #12345"
+  });
+
+  useEffect(() => {
+    loadAddressInfo();
+  }, []);
+
+  const loadAddressInfo = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('key, value')
+        .in('key', ['country', 'city_state', 'service_areas', 'license_number']);
+
+      console.log('Loading address info:', { data, error }); // Debug log
+
+      if (error) {
+        console.error('Database error loading address info:', error);
+        return; // Don't throw error for database issues
+      }
+
+      if (data && data.length > 0) {
+        const settings = data.reduce((acc, setting) => {
+          // Handle both string and already-parsed values
+          let value = setting.value;
+          if (typeof value === 'string' && value.startsWith('"') && value.endsWith('"')) {
+            value = value.slice(1, -1); // Remove quotes
+          }
+          acc[setting.key] = value || '';
+          return acc;
+        }, {} as any);
+
+        console.log('Parsed address settings:', settings); // Debug log
+        setFormData(prev => ({ ...prev, ...settings }));
+      } else {
+        console.log('No address settings found, using defaults');
+        // Keep default values if no settings exist yet
+      }
+    } catch (error) {
+      console.error('Unexpected error loading address info:', error);
+      // Don't break the UI for loading issues
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const settingsToUpdate = [
+        { key: 'country', value: formData.country },
+        { key: 'city_state', value: formData.city_state },
+        { key: 'service_areas', value: formData.service_areas },
+        { key: 'license_number', value: formData.license_number }
+      ];
+
+      console.log('Saving address settings:', settingsToUpdate); // Debug log
+
+      for (const setting of settingsToUpdate) {
+        const { data, error } = await supabase
+          .from('settings')
+          .upsert({
+            key: setting.key,
+            value: setting.value,
+            description: `Business ${setting.key.replace('_', ' ')}`,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'key'
+          })
+          .select();
+
+        console.log('Address upsert result:', { data, error }); // Debug log
+
+        if (error) {
+          console.error('Address upsert error:', error);
+          throw error;
+        }
+      }
+
+      // Reload the data after saving to ensure it's properly synced
+      await loadAddressInfo();
+
+      closeModal();
+      console.log('Address settings saved successfully'); // Debug log
+    } catch (error) {
+      console.error('Error saving address info:', error);
+      alert(`Failed to save changes: ${error.message}. Please try again.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
   return (
     <>
@@ -28,7 +122,7 @@ export default function UserAddressCard() {
                   Country
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  United States
+                  {formData.country}
                 </p>
               </div>
 
@@ -37,7 +131,7 @@ export default function UserAddressCard() {
                   City/State
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  Miami, Florida
+                  {formData.city_state}
                 </p>
               </div>
 
@@ -46,7 +140,7 @@ export default function UserAddressCard() {
                   Service Areas
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  Miami-Dade, Broward, Palm Beach
+                  {formData.service_areas}
                 </p>
               </div>
 
@@ -55,7 +149,7 @@ export default function UserAddressCard() {
                   License
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  FL CRE License #12345
+                  {formData.license_number}
                 </p>
               </div>
             </div>
@@ -88,22 +182,38 @@ export default function UserAddressCard() {
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                 <div>
                   <Label>Country</Label>
-                  <Input type="text" defaultValue="United States" />
+                  <Input
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <Label>City/State</Label>
-                  <Input type="text" defaultValue="Miami, Florida" />
+                  <Input
+                    type="text"
+                    value={formData.city_state}
+                    onChange={(e) => handleInputChange('city_state', e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <Label>Service Areas</Label>
-                  <Input type="text" defaultValue="Miami-Dade, Broward, Palm Beach" />
+                  <Input
+                    type="text"
+                    value={formData.service_areas}
+                    onChange={(e) => handleInputChange('service_areas', e.target.value)}
+                  />
                 </div>
 
                 <div>
                   <Label>License Number</Label>
-                  <Input type="text" defaultValue="FL CRE License #12345" />
+                  <Input
+                    type="text"
+                    value={formData.license_number}
+                    onChange={(e) => handleInputChange('license_number', e.target.value)}
+                  />
                 </div>
               </div>
             </div>
@@ -111,8 +221,8 @@ export default function UserAddressCard() {
               <Button size="sm" variant="outline" onClick={closeModal}>
                 Close
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                Save Changes
+              <Button size="sm" onClick={handleSave} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </form>
