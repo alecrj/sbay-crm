@@ -1,0 +1,287 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { supabase, Lead } from "@/lib/supabase";
+import { useModal } from "@/hooks/useModal";
+import { Modal } from "@/components/ui/modal";
+import LeadForm from "./LeadForm";
+import LeadCard from "./LeadCard";
+
+const LEAD_STATUSES = [
+  { id: "new", title: "New Leads", color: "bg-blue-500" },
+  { id: "contacted", title: "Contacted", color: "bg-yellow-500" },
+  { id: "qualified", title: "Qualified", color: "bg-purple-500" },
+  { id: "proposal-sent", title: "Proposal Sent", color: "bg-orange-500" },
+  { id: "closed-won", title: "Closed Won", color: "bg-green-500" },
+  { id: "closed-lost", title: "Closed Lost", color: "bg-red-500" },
+] as const;
+
+const LeadKanban: React.FC = () => {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const { isOpen, openModal, closeModal } = useModal();
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLeads(data || []);
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddLead = () => {
+    setSelectedLead(null);
+    openModal();
+  };
+
+  const handleEditLead = (lead: Lead) => {
+    setSelectedLead(lead);
+    openModal();
+  };
+
+  const handleLeadSaved = () => {
+    fetchLeads();
+    closeModal();
+  };
+
+  const moveLead = async (leadId: string, newStatus: Lead['status']) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ status: newStatus })
+        .eq('id', leadId);
+
+      if (error) throw error;
+
+      // Update local state
+      setLeads(prev => prev.map(lead =>
+        lead.id === leadId ? { ...lead, status: newStatus } : lead
+      ));
+
+      // Log activity
+      await supabase
+        .from('lead_activities')
+        .insert([{
+          lead_id: leadId,
+          activity_type: 'status_change',
+          title: 'Status updated',
+          description: `Lead status changed to ${newStatus}`,
+          metadata: { new_status: newStatus }
+        }]);
+
+    } catch (error) {
+      console.error('Error moving lead:', error);
+    }
+  };
+
+  const filteredLeads = leads.filter(lead =>
+    lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    lead.company?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getLeadsByStatus = (status: string) => {
+    return filteredLeads.filter(lead => lead.status === status);
+  };
+
+  const getPriorityColor = (priority: Lead['priority']) => {
+    switch (priority) {
+      case 'urgent': return 'border-l-red-500';
+      case 'high': return 'border-l-orange-500';
+      case 'medium': return 'border-l-yellow-500';
+      case 'low': return 'border-l-green-500';
+      default: return 'border-l-gray-300';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <DndProvider backend={HTML5Backend}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Lead Pipeline
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Track and manage your sales leads through the pipeline
+            </p>
+          </div>
+          <button
+            onClick={handleAddLead}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add New Lead
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="max-w-md">
+          <input
+            type="text"
+            placeholder="Search leads..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          />
+        </div>
+
+        {/* Kanban Board */}
+        <div className="flex space-x-6 overflow-x-auto pb-6">
+          {LEAD_STATUSES.map((status) => (
+            <KanbanColumn
+              key={status.id}
+              status={status}
+              leads={getLeadsByStatus(status.id)}
+              onMoveLead={moveLead}
+              onEditLead={handleEditLead}
+              getPriorityColor={getPriorityColor}
+            />
+          ))}
+        </div>
+
+        {/* Add/Edit Lead Modal */}
+        <Modal
+          isOpen={isOpen}
+          onClose={closeModal}
+          className="max-w-4xl p-6"
+        >
+          <LeadForm
+            lead={selectedLead}
+            onSave={handleLeadSaved}
+            onCancel={closeModal}
+          />
+        </Modal>
+      </div>
+    </DndProvider>
+  );
+};
+
+interface KanbanColumnProps {
+  status: typeof LEAD_STATUSES[0];
+  leads: Lead[];
+  onMoveLead: (leadId: string, newStatus: Lead['status']) => void;
+  onEditLead: (lead: Lead) => void;
+  getPriorityColor: (priority: Lead['priority']) => string;
+}
+
+const KanbanColumn: React.FC<KanbanColumnProps> = ({
+  status,
+  leads,
+  onMoveLead,
+  onEditLead,
+  getPriorityColor,
+}) => {
+  const [{ isOver }, drop] = useDrop({
+    accept: 'lead',
+    drop: (item: { id: string }) => {
+      onMoveLead(item.id, status.id as Lead['status']);
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+    }),
+  });
+
+  return (
+    <div
+      ref={drop}
+      className={`flex-shrink-0 w-80 bg-gray-50 dark:bg-gray-900 rounded-lg p-4 ${
+        isOver ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
+      }`}
+    >
+      {/* Column Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <div className={`w-3 h-3 rounded-full ${status.color}`}></div>
+          <h3 className="font-semibold text-gray-900 dark:text-white">
+            {status.title}
+          </h3>
+          <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-2 py-1 rounded-full">
+            {leads.length}
+          </span>
+        </div>
+      </div>
+
+      {/* Lead Cards */}
+      <div className="space-y-3 max-h-96 overflow-y-auto">
+        {leads.map((lead) => (
+          <DraggableLeadCard
+            key={lead.id}
+            lead={lead}
+            onEdit={onEditLead}
+            priorityColor={getPriorityColor(lead.priority)}
+          />
+        ))}
+
+        {leads.length === 0 && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            No leads in this stage
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+interface DraggableLeadCardProps {
+  lead: Lead;
+  onEdit: (lead: Lead) => void;
+  priorityColor: string;
+}
+
+const DraggableLeadCard: React.FC<DraggableLeadCardProps> = ({
+  lead,
+  onEdit,
+  priorityColor,
+}) => {
+  const [{ isDragging }, drag] = useDrag({
+    type: 'lead',
+    item: { id: lead.id },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  return (
+    <div
+      ref={drag}
+      className={`cursor-move ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+    >
+      <LeadCard
+        lead={lead}
+        onEdit={onEdit}
+        priorityColor={priorityColor}
+      />
+    </div>
+  );
+};
+
+export default LeadKanban;
