@@ -38,7 +38,7 @@ A professional, full-featured Customer Relationship Management system built spec
 
 ## Overview
 
-TailAdmin provides essential UI components and layouts for building feature-rich, data-driven admin dashboards and control panels. It's built on:
+alecrj provides essential UI components and layouts for building feature-rich, data-driven admin dashboards and control panels. It's built on:
 
 - Next.js 15.x
 - React 19
@@ -57,14 +57,14 @@ TailAdmin provides essential UI components and layouts for building feature-rich
 - [Pro Version](https://nextjs-demo.tailadmin.com)
 
 ### Other Versions
-- [HTML Version](https://github.com/TailAdmin/tailadmin-free-tailwind-dashboard-template)
-- [React Version](https://github.com/TailAdmin/free-react-tailwind-admin-dashboard)
-- [Vue.js Version](https://github.com/TailAdmin/vue-tailwind-admin-dashboard)
+- [HTML Version](https://github.com/alecrj/tailadmin-free-tailwind-dashboard-template)
+- [React Version](https://github.com/alecrj/free-react-tailwind-admin-dashboard)
+- [Vue.js Version](https://github.com/alecrj/vue-tailwind-admin-dashboard)
 
 ## Installation
 
 ### Prerequisites
-To get started with TailAdmin, ensure you have the following prerequisites installed and set up:
+To get started with alecrj, ensure you have the following prerequisites installed and set up:
 
 - Node.js 18.x or later (recommended to use Node.js 20.x or later)
 
@@ -72,7 +72,7 @@ To get started with TailAdmin, ensure you have the following prerequisites insta
 Clone the repository using the following command:
 
 ```bash
-git clone https://github.com/TailAdmin/free-nextjs-admin-dashboard.git
+git clone https://github.com/alecrj/free-nextjs-admin-dashboard.git
 ```
 
 > Windows Users: place the repository near the root of your drive if you face issues while cloning.
@@ -94,7 +94,7 @@ git clone https://github.com/TailAdmin/free-nextjs-admin-dashboard.git
 
 ## Components
 
-TailAdmin is a pre-designed starting point for building a web-based dashboard using Next.js and Tailwind CSS. The template includes:
+alecrj is a pre-designed starting point for building a web-based dashboard using Next.js and Tailwind CSS. The template includes:
 
 - Sophisticated and accessible sidebar
 - Data visualization components
@@ -194,7 +194,7 @@ A major update focused on Next.js 15 implementation and comprehensive redesign.
 
 ## License
 
-TailAdmin Next.js Free Version is released under the MIT License.
+alecrj Next.js Free Version is released under the MIT License.
 
 ## Support
 
