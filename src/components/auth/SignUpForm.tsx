@@ -5,10 +5,79 @@ import Label from "@/components/form/Label";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function SignUpForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('agent');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const { signUp } = useAuth();
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    if (!isChecked) {
+      setError('Please agree to the terms and conditions');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
+    const { error } = await signUp(email, password, {
+      full_name: `${firstName} ${lastName}`,
+      role: role
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setSuccess(true);
+    }
+
+    setLoading(false);
+  };
+
+  if (success) {
+    return (
+      <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
+        <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
+          <div className="text-center">
+            <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-green-100 dark:bg-green-900 mb-4">
+              <svg className="h-6 w-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Account Created!
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Please check your email to verify your account before signing in.
+            </p>
+            <Link href="/signin" className="inline-flex items-center px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600">
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -83,7 +152,7 @@ export default function SignUpForm() {
                 </span>
               </div>
             </div>
-            <form>
+            <form onSubmit={handleSubmit}>
               <div className="space-y-5">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   {/* <!-- First Name --> */}
@@ -95,7 +164,10 @@ export default function SignUpForm() {
                       type="text"
                       id="fname"
                       name="fname"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
                       placeholder="Enter your first name"
+                      required
                     />
                   </div>
                   {/* <!-- Last Name --> */}
@@ -107,7 +179,10 @@ export default function SignUpForm() {
                       type="text"
                       id="lname"
                       name="lname"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
                       placeholder="Enter your last name"
+                      required
                     />
                   </div>
                 </div>
@@ -120,8 +195,27 @@ export default function SignUpForm() {
                     type="email"
                     id="email"
                     name="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
+                    required
                   />
+                </div>
+                {/* <!-- Role --> */}
+                <div>
+                  <Label>
+                    Role<span className="text-error-500">*</span>
+                  </Label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full px-4 py-3 text-sm bg-white border border-gray-200 rounded-lg focus:border-brand-500 focus:outline-none dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                    required
+                  >
+                    <option value="agent">Agent</option>
+                    <option value="admin">Admin</option>
+                    <option value="assistant">Assistant</option>
+                  </select>
                 </div>
                 {/* <!-- Password --> */}
                 <div>
@@ -132,6 +226,9 @@ export default function SignUpForm() {
                     <Input
                       placeholder="Enter your password"
                       type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -163,10 +260,38 @@ export default function SignUpForm() {
                     </span>
                   </p>
                 </div>
+                {/* Error Message */}
+                {error && (
+                  <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/50 dark:border-red-800 dark:text-red-400">
+                    {error}
+                  </div>
+                )}
+
+                {/* Success Message */}
+                {success && (
+                  <div className="p-4 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/50 dark:border-green-800 dark:text-green-400">
+                    Account created successfully! Please check your email to verify your account.
+                  </div>
+                )}
+
                 {/* <!-- Button --> */}
                 <div>
-                  <button className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600">
-                    Sign Up
+                  <button
+                    type="submit"
+                    disabled={loading || !isChecked}
+                    className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creating Account...
+                      </>
+                    ) : (
+                      'Sign Up'
+                    )}
                   </button>
                 </div>
               </div>
