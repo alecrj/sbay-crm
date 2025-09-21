@@ -17,10 +17,7 @@ export default function CRMDashboard() {
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-sm text-white p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Welcome to Shallow Bay Advisors CRM</h1>
-            <p className="text-blue-100 mt-1">
-              Manage your commercial real estate leads and properties efficiently
-            </p>
+            <h1 className="text-2xl font-bold">Dashboard</h1>
           </div>
           <div className="hidden md:block">
             <div className="w-16 h-16 bg-white/10 rounded-lg flex items-center justify-center">

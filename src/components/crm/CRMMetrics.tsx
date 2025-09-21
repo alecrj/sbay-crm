@@ -86,7 +86,7 @@ const CRMMetrics: React.FC = () => {
         propertiesListed,
         closedDeals,
         conversionRate,
-        avgDealValue: '$2.5M', // This could be calculated from actual deal data
+        avgDealValue: '$0', // Will be calculated from actual deal data when available
       });
 
     } catch (error) {
@@ -160,8 +160,6 @@ const CRMMetrics: React.FC = () => {
           </svg>
         }
         color="blue"
-        trend="+12% this month"
-        trendDirection="up"
       />
 
       <MetricCard
@@ -174,8 +172,6 @@ const CRMMetrics: React.FC = () => {
           </svg>
         }
         color="green"
-        trend="+8% vs last month"
-        trendDirection="up"
       />
 
       <MetricCard
@@ -188,8 +184,6 @@ const CRMMetrics: React.FC = () => {
           </svg>
         }
         color="purple"
-        trend={`${stats.conversionRate}% conversion`}
-        trendDirection="up"
       />
 
       <MetricCard
@@ -214,8 +208,6 @@ const CRMMetrics: React.FC = () => {
           </svg>
         }
         color="blue"
-        trend="5 new this week"
-        trendDirection="up"
       />
 
       <MetricCard
@@ -228,8 +220,6 @@ const CRMMetrics: React.FC = () => {
           </svg>
         }
         color="green"
-        trend={`${stats.conversionRate}% rate`}
-        trendDirection="up"
       />
 
       <MetricCard
@@ -242,8 +232,6 @@ const CRMMetrics: React.FC = () => {
           </svg>
         }
         color="purple"
-        trend="+15% this quarter"
-        trendDirection="up"
       />
 
       <MetricCard
@@ -256,8 +244,6 @@ const CRMMetrics: React.FC = () => {
           </svg>
         }
         color="orange"
-        trend="+3% this month"
-        trendDirection="up"
       />
     </div>
   );
