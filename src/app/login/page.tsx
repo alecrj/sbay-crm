@@ -142,26 +142,11 @@ export default function LoginPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Need an account?{' '}
               <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400">
-                Contact your administrator
+                Create account
               </Link>
             </p>
           </div>
         </form>
-
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-50 dark:bg-gray-900 text-gray-500">Demo Credentials</span>
-            </div>
-          </div>
-          <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">
-            <p><strong>Admin:</strong> admin@shallowbayadvisors.com / admin123</p>
-            <p><strong>Agent:</strong> agent@shallowbayadvisors.com / agent123</p>
-          </div>
-        </div>
       </div>
     </div>
   );
