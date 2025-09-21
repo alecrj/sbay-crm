@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
   title: 'Shallow Bay Advisors CRM',
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${outfit.className} dark:bg-gray-900`}>
         <ThemeProvider>
-          <SidebarProvider>{children}</SidebarProvider>
+          <AuthProvider>
+            <SidebarProvider>{children}</SidebarProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
