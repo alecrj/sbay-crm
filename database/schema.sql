@@ -165,7 +165,13 @@ INSERT INTO settings (key, value, description) VALUES
 ('notification_emails', '["admin@shabay.com"]', 'Email addresses for notifications'),
 ('google_analytics_id', '""', 'Google Analytics tracking ID'),
 ('calendar_booking_enabled', 'true', 'Enable calendar booking widget'),
-('lead_auto_assignment', 'true', 'Enable automatic lead assignment')
+('lead_auto_assignment', 'true', 'Enable automatic lead assignment'),
+('notifications_email_enabled', 'true', 'Enable email notifications'),
+('notifications_sms_enabled', 'false', 'Enable SMS notifications'),
+('notifications_email_provider', '"resend"', 'Email provider (resend, sendgrid, nodemailer)'),
+('notifications_sms_provider', '"twilio"', 'SMS provider (twilio, vonage)'),
+('notifications_from_email', '"noreply@shallowbayadvisors.com"', 'From email address for notifications'),
+('notifications_from_name', '"Shallow Bay Advisors"', 'From name for email notifications')
 ON CONFLICT (key) DO NOTHING;
 
 -- Enable Row Level Security
@@ -209,4 +215,36 @@ CREATE POLICY "Admins can manage settings" ON settings
     FOR ALL USING (EXISTS(SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
 
 CREATE POLICY "Authenticated users can manage lead activities" ON lead_activities
+    FOR ALL USING (auth.role() = 'authenticated');
+
+-- Notification queue table for scheduled notifications
+CREATE TABLE notification_queue (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  type VARCHAR(100) NOT NULL, -- 'appointment_reminder_24h', 'appointment_reminder_2h', 'new_lead_notification', etc.
+  recipient_email VARCHAR(255),
+  recipient_phone VARCHAR(50),
+  recipient_name VARCHAR(255) NOT NULL,
+  scheduled_for TIMESTAMP WITH TIME ZONE NOT NULL,
+  data JSONB NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed')),
+  reminder_type VARCHAR(20), -- '24h', '2h', 'immediate'
+  appointment_id UUID REFERENCES appointments(id) ON DELETE CASCADE,
+  lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
+  attempts INTEGER DEFAULT 0,
+  last_attempt TIMESTAMP WITH TIME ZONE,
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for notification queue
+CREATE INDEX idx_notification_queue_status_scheduled ON notification_queue(status, scheduled_for);
+CREATE INDEX idx_notification_queue_appointment ON notification_queue(appointment_id);
+CREATE INDEX idx_notification_queue_lead ON notification_queue(lead_id);
+CREATE INDEX idx_notification_queue_type ON notification_queue(type);
+
+-- Enable RLS for notification queue
+ALTER TABLE notification_queue ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated users can manage notification queue" ON notification_queue
     FOR ALL USING (auth.role() = 'authenticated');

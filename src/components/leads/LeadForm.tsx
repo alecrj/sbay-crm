@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase, Lead } from "@/lib/supabase";
+import { scheduleLeadNotification } from "@/lib/notification-scheduler";
 
 interface LeadFormProps {
   lead?: Lead | null;
@@ -111,6 +112,16 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) => {
               description: `New lead created from ${formData.source}`,
               metadata: { source: formData.source, type: formData.type }
             }]);
+
+          // Schedule notification for new lead
+          await scheduleLeadNotification(newLead.id, {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            company: formData.company,
+            source: formData.source,
+            priority: formData.priority,
+          });
         }
       }
 
