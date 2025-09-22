@@ -32,10 +32,13 @@ export default function MagicLoginPage() {
       }
 
       // Send magic link
+      // Use current domain for redirect (localhost in dev, production in prod)
+      const redirectUrl = `${window.location.origin}/auth/callback`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
-          emailRedirectTo: 'https://sbaycrm.netlify.app/auth/callback'
+          emailRedirectTo: redirectUrl
         }
       });
 
