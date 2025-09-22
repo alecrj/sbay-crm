@@ -20,13 +20,13 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const sendMagicLink = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
     try {
-      // First check if email is invited
+      // Check if email has an account (is invited and accepted)
       const { data: invitation, error: invitationError } = await supabase
         .from('invited_users')
         .select('*')
@@ -35,15 +35,15 @@ export default function LoginPage() {
         .single();
 
       if (invitationError || !invitation) {
-        throw new Error('Access denied. You need an invitation to access this system.');
+        throw new Error('No account found. Please contact an administrator for access.');
       }
 
       // Check if invitation is expired
       if (new Date(invitation.expires_at) < new Date()) {
-        throw new Error('Your invitation has expired. Please contact the administrator for a new invitation.');
+        throw new Error('Your access has expired. Please contact the administrator.');
       }
 
-      // Use current domain for redirect (localhost in dev, production in prod)
+      // Send magic link for login
       const redirectUrl = `${window.location.origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOtp({
@@ -56,7 +56,7 @@ export default function LoginPage() {
       if (error) throw error;
 
       setSent(true);
-      setMessage(`Magic link sent to ${email}! Check your inbox and click the link to sign in.`);
+      setMessage(`Login link sent to ${email}! Check your inbox and click the link to sign in.`);
     } catch (error) {
       console.error('Error:', error);
       setMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -73,13 +73,13 @@ export default function LoginPage() {
             Sign In
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Enter your email to receive a secure login link
+            Enter your email to sign into your account
           </p>
         </div>
 
         <div className="bg-white p-8 rounded-lg shadow border space-y-6">
           {!sent ? (
-            <form onSubmit={sendMagicLink} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
@@ -96,10 +96,10 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                disabled={loading || !email}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                disabled={loading || !email.trim()}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Sending...' : 'Send Login Link'}
+                {loading ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
           ) : (
@@ -137,17 +137,17 @@ export default function LoginPage() {
 
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Login links are secure and expire after 1 hour
+              We'll send you a secure login link via email
             </p>
           </div>
         </div>
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="font-medium text-yellow-800 mb-2">Secure Access</h3>
+          <h3 className="font-medium text-yellow-800 mb-2">Account Access</h3>
           <div className="text-sm text-yellow-700 space-y-1">
-            <p>• Only invited users can access the system</p>
-            <p>• Email must be pre-approved by admin</p>
-            <p>• Invitations expire for security</p>
+            <p>• Enter your registered email address</p>
+            <p>• We'll send you a secure login link</p>
+            <p>• No account? Contact an administrator</p>
             <p>• No passwords needed - just email verification</p>
           </div>
         </div>
