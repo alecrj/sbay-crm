@@ -75,7 +75,7 @@ export default function InvitationsPage() {
 
       if (error) throw error;
 
-      setMessage(`✅ ${formData.email} has been invited! They can now use the magic link login.`);
+      setMessage(`${formData.email} has been invited! They can now use the magic link login.`);
       setFormData({ email: '', role: 'client' });
       setShowForm(false);
       await loadInvitations();
@@ -133,7 +133,7 @@ export default function InvitationsPage() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                🔐 User Invitations
+                User Invitations
               </h1>
               <p className="text-gray-600">
                 Manage who can access your CRM system via magic links
@@ -213,7 +213,7 @@ export default function InvitationsPage() {
 
               {message && (
                 <div className={`mt-4 p-3 rounded-lg text-sm ${
-                  message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                  message.includes('invited') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                 }`}>
                   {message}
                 </div>
@@ -224,7 +224,7 @@ export default function InvitationsPage() {
 
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h3 className="font-medium text-blue-900 mb-2">🪄 How Magic Link Access Works</h3>
+          <h3 className="font-medium text-blue-900 mb-2">How Magic Link Access Works</h3>
           <div className="text-sm text-blue-800 space-y-2">
             <p><strong>1. Invite users</strong> by adding their email addresses here</p>
             <p><strong>2. Share the magic link URL:</strong> <code className="bg-blue-100 px-2 py-1 rounded">https://sbaycrm.netlify.app/magic-login</code></p>

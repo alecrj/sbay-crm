@@ -56,7 +56,7 @@ export default function MagicLoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            🪄 Magic Link Login
+            Magic Link Login
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             No password needed - we'll email you a secure login link
@@ -84,7 +84,7 @@ export default function MagicLoginPage() {
                 disabled={loading || !email}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {loading ? 'Sending...' : '✨ Send Magic Link'}
+                {loading ? 'Sending...' : 'Send Magic Link'}
               </button>
             </>
           ) : (
@@ -100,9 +100,9 @@ export default function MagicLoginPage() {
               </p>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="text-sm text-blue-800 space-y-2">
-                  <p><strong>📧 Check your inbox</strong> (including spam folder)</p>
-                  <p><strong>🔗 Click the magic link</strong> in the email</p>
-                  <p><strong>🚀 You'll be automatically logged in</strong></p>
+                  <p><strong>Check your inbox</strong> (including spam folder)</p>
+                  <p><strong>Click the magic link</strong> in the email</p>
+                  <p><strong>You'll be automatically logged in</strong></p>
                 </div>
               </div>
               <button
@@ -134,7 +134,7 @@ export default function MagicLoginPage() {
         </div>
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="font-medium text-yellow-800 mb-2">🔒 Secure Access</h3>
+          <h3 className="font-medium text-yellow-800 mb-2">Secure Access</h3>
           <div className="text-sm text-yellow-700 space-y-1">
             <p>• Only invited users can access the system</p>
             <p>• Email must be pre-approved by admin</p>
