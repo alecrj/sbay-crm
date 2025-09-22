@@ -12,6 +12,6 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 # Scheduled function to process notifications every 5 minutes
-[[functions]]
-  schedule = "*/5 * * * *"
-  function = "scheduled-notifications"
+# [[functions]]
+#   schedule = "*/5 * * * *"
+#   function = "scheduled-notifications"
