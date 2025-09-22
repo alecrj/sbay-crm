@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
 export default function MagicLoginPage() {
-  const [email, setEmail] = useState('99alecrodriguez@gmail.com');
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
@@ -14,6 +14,24 @@ export default function MagicLoginPage() {
     setMessage('');
 
     try {
+      // First check if email is invited
+      const { data: invitation, error: invitationError } = await supabase
+        .from('invited_users')
+        .select('*')
+        .eq('email', email)
+        .eq('status', 'accepted')
+        .single();
+
+      if (invitationError || !invitation) {
+        throw new Error('Access denied. You need an invitation to access this system.');
+      }
+
+      // Check if invitation is expired
+      if (new Date(invitation.expires_at) < new Date()) {
+        throw new Error('Your invitation has expired. Please contact the administrator for a new invitation.');
+      }
+
+      // Send magic link
       const { error } = await supabase.auth.signInWithOtp({
         email: email,
         options: {
@@ -116,12 +134,12 @@ export default function MagicLoginPage() {
         </div>
 
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="font-medium text-yellow-800 mb-2">💡 For Your Clients</h3>
+          <h3 className="font-medium text-yellow-800 mb-2">🔒 Secure Access</h3>
           <div className="text-sm text-yellow-700 space-y-1">
-            <p>• Send them this URL: <code className="bg-yellow-100 px-1 rounded">sbaycrm.netlify.app/magic-login</code></p>
-            <p>• They enter their email and get instant access</p>
-            <p>• No passwords to remember or share</p>
-            <p>• Works on any device, anywhere</p>
+            <p>• Only invited users can access the system</p>
+            <p>• Email must be pre-approved by admin</p>
+            <p>• Invitations expire for security</p>
+            <p>• No passwords needed - just email verification</p>
           </div>
         </div>
       </div>

@@ -1,0 +1,325 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
+import { supabase } from '../../../lib/supabase';
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  invitation_token: string;
+  invited_at: string;
+  accepted_at?: string;
+  expires_at: string;
+  status: string;
+}
+
+export default function InvitationsPage() {
+  const { user } = useAuth();
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    role: 'client'
+  });
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    loadInvitations();
+  }, []);
+
+  const loadInvitations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invited_users')
+        .select('*')
+        .order('invited_at', { ascending: false });
+
+      if (error) throw error;
+      setInvitations(data || []);
+    } catch (error) {
+      console.error('Error loading invitations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      // Check if email already exists
+      const { data: existing } = await supabase
+        .from('invited_users')
+        .select('*')
+        .eq('email', formData.email)
+        .single();
+
+      if (existing) {
+        setMessage('This email is already invited');
+        return;
+      }
+
+      // Create invitation
+      const { error } = await supabase
+        .from('invited_users')
+        .insert([{
+          email: formData.email,
+          role: formData.role,
+          invited_by: user?.id,
+          status: 'accepted', // Auto-accept so they can immediately use magic link
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+        }]);
+
+      if (error) throw error;
+
+      setMessage(`✅ ${formData.email} has been invited! They can now use the magic link login.`);
+      setFormData({ email: '', role: 'client' });
+      setShowForm(false);
+      await loadInvitations();
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      setMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const revokeInvitation = async (id: string) => {
+    if (!confirm('Are you sure you want to revoke this invitation?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('invited_users')
+        .update({ status: 'expired' })
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadInvitations();
+    } catch (error) {
+      console.error('Error revoking invitation:', error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'accepted': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'expired': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading invitations...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                🔐 User Invitations
+              </h1>
+              <p className="text-gray-600">
+                Manage who can access your CRM system via magic links
+              </p>
+            </div>
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              + Invite User
+            </button>
+          </div>
+        </div>
+
+        {/* Invitation Form Modal */}
+        {showForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Invite New User</h2>
+                <button
+                  onClick={() => {setShowForm(false); setMessage('');}}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={sendInvitation} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="user@example.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role *
+                  </label>
+                  <select
+                    required
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="client">Client</option>
+                    <option value="assistant">Assistant</option>
+                    <option value="agent">Agent</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    Send Invitation
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {setShowForm(false); setMessage('');}}
+                    className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+
+              {message && (
+                <div className={`mt-4 p-3 rounded-lg text-sm ${
+                  message.includes('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}>
+                  {message}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Instructions */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+          <h3 className="font-medium text-blue-900 mb-2">🪄 How Magic Link Access Works</h3>
+          <div className="text-sm text-blue-800 space-y-2">
+            <p><strong>1. Invite users</strong> by adding their email addresses here</p>
+            <p><strong>2. Share the magic link URL:</strong> <code className="bg-blue-100 px-2 py-1 rounded">https://sbaycrm.netlify.app/magic-login</code></p>
+            <p><strong>3. They enter their email</strong> and get a secure login link via email</p>
+            <p><strong>4. One-click access</strong> - no passwords needed!</p>
+          </div>
+        </div>
+
+        {/* Invitations Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Current Invitations</h3>
+          </div>
+
+          {invitations.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No invitations yet</h3>
+              <p className="text-gray-600 mb-6">
+                Invite your team and clients to access the CRM system.
+              </p>
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+              >
+                Send First Invitation
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Invited
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Expires
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {invitations.map((invitation) => (
+                    <tr key={invitation.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {invitation.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        <span className="capitalize">{invitation.role}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invitation.status)}`}>
+                          {invitation.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(invitation.invited_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(invitation.expires_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {invitation.status === 'accepted' && (
+                          <button
+                            onClick={() => revokeInvitation(invitation.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
