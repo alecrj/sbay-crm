@@ -22,7 +22,7 @@ export default function InvitationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    role: 'client'
+    role: 'user'
   });
   const [message, setMessage] = useState('');
 
@@ -187,9 +187,7 @@ export default function InvitationsPage() {
                     onChange={(e) => setFormData({...formData, role: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="client">Client</option>
-                    <option value="assistant">Assistant</option>
-                    <option value="agent">Agent</option>
+                    <option value="user">User</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
