@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
             Admin Setup
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Temporary admin access setup
+            Live site admin access - Use this while OAuth is being configured
           </p>
         </div>
 
