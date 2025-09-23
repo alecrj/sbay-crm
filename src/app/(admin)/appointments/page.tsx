@@ -1,0 +1,390 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useUserRole } from '../../../contexts/UserRoleContext';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../../lib/supabase';
+
+interface Appointment {
+  id: string;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  status: string;
+  attendees: string[];
+  reminder_24h_sent: boolean;
+  reminder_2h_sent: boolean;
+  created_at: string;
+  leads: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+  };
+}
+
+export default function AppointmentsPage() {
+  const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const router = useRouter();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('upcoming'); // 'all', 'upcoming', 'today', 'past'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'scheduled', 'confirmed', 'completed', 'cancelled'
+
+  useEffect(() => {
+    if (!roleLoading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, roleLoading, router]);
+
+  useEffect(() => {
+    loadAppointments();
+  }, []);
+
+  const loadAppointments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          leads (
+            id, name, email, phone, company
+          )
+        `)
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('Error loading appointments:', error);
+        setAppointments([]);
+        return;
+      }
+
+      setAppointments(data || []);
+    } catch (error) {
+      console.error('Error loading appointments:', error);
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: newStatus })
+        .eq('id', appointmentId);
+
+      if (error) throw error;
+
+      // Update local state
+      setAppointments(prev =>
+        prev.map(apt =>
+          apt.id === appointmentId
+            ? { ...apt, status: newStatus }
+            : apt
+        )
+      );
+
+      // Log activity
+      const appointment = appointments.find(apt => apt.id === appointmentId);
+      if (appointment) {
+        await supabase
+          .from('lead_activities')
+          .insert([{
+            lead_id: appointment.leads.id,
+            activity_type: 'status_change',
+            title: `Appointment status changed to ${newStatus}`,
+            description: `Appointment "${appointment.title}" status updated from ${appointment.status} to ${newStatus}`,
+            metadata: {
+              appointment_id: appointmentId,
+              old_status: appointment.status,
+              new_status: newStatus
+            }
+          }]);
+      }
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+    }
+  };
+
+  const sendRemindersManually = async () => {
+    try {
+      const response = await fetch('/.netlify/functions/send-appointment-reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully sent ${result.remindersSent} reminders`);
+        loadAppointments(); // Refresh to see updated reminder status
+      } else {
+        throw new Error('Failed to send reminders');
+      }
+    } catch (error) {
+      console.error('Error sending reminders:', error);
+      alert('Failed to send reminders. Please try again.');
+    }
+  };
+
+  const getFilteredAppointments = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+    let filtered = appointments;
+
+    // Apply time filter
+    switch (filter) {
+      case 'upcoming':
+        filtered = filtered.filter(apt => new Date(apt.start_time) >= now);
+        break;
+      case 'today':
+        filtered = filtered.filter(apt => {
+          const aptDate = new Date(apt.start_time);
+          return aptDate >= today && aptDate < tomorrow;
+        });
+        break;
+      case 'past':
+        filtered = filtered.filter(apt => new Date(apt.start_time) < now);
+        break;
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(apt => apt.status === statusFilter);
+    }
+
+    return filtered;
+  };
+
+  const formatDateTime = (dateTime: string) => {
+    const date = new Date(dateTime);
+    return {
+      date: date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    };
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'scheduled': return 'bg-blue-100 text-blue-800';
+      case 'confirmed': return 'bg-green-100 text-green-800';
+      case 'completed': return 'bg-gray-100 text-gray-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading || roleLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading appointments...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
+
+  const filteredAppointments = getFilteredAppointments();
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                📅 Appointment Management
+              </h1>
+              <p className="text-gray-600">
+                Manage your scheduled appointments and send reminders
+              </p>
+            </div>
+            <button
+              onClick={sendRemindersManually}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>Send Reminders</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Time Filter
+              </label>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Appointments</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="today">Today</option>
+                <option value="past">Past</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status Filter
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Appointments Grid */}
+        <div className="grid gap-6">
+          {filteredAppointments.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No appointments found</h3>
+              <p className="text-gray-600">
+                {filter === 'all' ? 'No appointments have been booked yet.' : `No ${filter} appointments found.`}
+              </p>
+            </div>
+          ) : (
+            filteredAppointments.map((appointment) => {
+              const { date, time } = formatDateTime(appointment.start_time);
+              const endTime = formatDateTime(appointment.end_time).time;
+
+              return (
+                <div key={appointment.id} className="bg-white rounded-lg shadow p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {appointment.title}
+                        </h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(appointment.status)}`}>
+                          {appointment.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">
+                            <strong>Client:</strong> {appointment.leads?.name}
+                          </p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            <strong>Email:</strong> {appointment.leads?.email}
+                          </p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            <strong>Phone:</strong> {appointment.leads?.phone}
+                          </p>
+                          {appointment.leads?.company && (
+                            <p className="text-sm text-gray-600 mb-1">
+                              <strong>Company:</strong> {appointment.leads?.company}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">
+                            <strong>Date:</strong> {date}
+                          </p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            <strong>Time:</strong> {time} - {endTime}
+                          </p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            <strong>Location:</strong> {appointment.location}
+                          </p>
+                        </div>
+                      </div>
+
+                      {appointment.description && (
+                        <p className="text-sm text-gray-700 mb-4">
+                          <strong>Description:</strong> {appointment.description}
+                        </p>
+                      )}
+
+                      {/* Reminder Status */}
+                      <div className="flex items-center space-x-4 text-xs">
+                        <div className={`flex items-center space-x-1 ${appointment.reminder_24h_sent ? 'text-green-600' : 'text-gray-400'}`}>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span>24h reminder {appointment.reminder_24h_sent ? 'sent' : 'pending'}</span>
+                        </div>
+                        <div className={`flex items-center space-x-1 ${appointment.reminder_2h_sent ? 'text-green-600' : 'text-gray-400'}`}>
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span>2h reminder {appointment.reminder_2h_sent ? 'sent' : 'pending'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col space-y-2 ml-4">
+                      <select
+                        value={appointment.status}
+                        onChange={(e) => updateAppointmentStatus(appointment.id, e.target.value)}
+                        className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      >
+                        <option value="scheduled">Scheduled</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+
+                      <a
+                        href={`/leads`}
+                        className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded text-center hover:bg-blue-200"
+                      >
+                        View Lead
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
