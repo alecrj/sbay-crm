@@ -34,7 +34,7 @@ function AuthCallbackContent() {
             router.push('/login?action=reset_password');
           } else {
             // Regular login, redirect to dashboard
-            router.push('/');
+            router.replace('/');
           }
         } else {
           // No session, redirect back to login

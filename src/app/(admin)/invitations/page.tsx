@@ -29,6 +29,8 @@ export default function InvitationsPage() {
     role: 'user'
   });
   const [message, setMessage] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastInvitedEmail, setLastInvitedEmail] = useState('');
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -58,40 +60,35 @@ export default function InvitationsPage() {
 
   const sendInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
+    setMessage('');
 
     try {
-      // Check if email already exists
-      const { data: existing } = await supabase
-        .from('invited_users')
-        .select('*')
-        .eq('email', formData.email)
-        .single();
-
-      if (existing) {
-        setMessage('This email is already invited');
-        return;
-      }
-
-      // Create invitation
-      const { error } = await supabase
-        .from('invited_users')
-        .insert([{
+      const response = await fetch('/api/admin/send-invitation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           email: formData.email,
           role: formData.role,
-          invited_by: user?.id,
-          status: 'accepted', // Auto-accept so they can immediately use magic link
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-        }]);
+          invitedBy: user?.id
+        }),
+      });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      setMessage(`${formData.email} has been invited! They can now use the magic link login.`);
-      setFormData({ email: '', role: 'client' });
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send invitation');
+      }
+
+      setLastInvitedEmail(formData.email);
+      setFormData({ email: '', role: 'user' });
       setShowForm(false);
+      setShowSuccessModal(true);
       await loadInvitations();
     } catch (error) {
       console.error('Error sending invitation:', error);
-      setMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -150,7 +147,7 @@ export default function InvitationsPage() {
                 User Invitations
               </h1>
               <p className="text-gray-600">
-                Manage who can access your CRM system via magic links
+                Manage who can access your CRM system with email/password authentication
               </p>
             </div>
             <button
@@ -201,8 +198,8 @@ export default function InvitationsPage() {
                     onChange={(e) => setFormData({...formData, role: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="user">User (Basic Access)</option>
+                    <option value="admin">Admin (Full Access)</option>
                   </select>
                 </div>
 
@@ -234,14 +231,73 @@ export default function InvitationsPage() {
           </div>
         )}
 
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Invitation Sent!</h2>
+                <p className="text-gray-600">
+                  <strong>{lastInvitedEmail}</strong> has been invited to join your CRM.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-blue-900 mb-2">Next Steps:</h3>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <p><strong>1.</strong> Share the signup link below with {lastInvitedEmail}</p>
+                  <p><strong>2.</strong> They click "Need to set up account?" on the login page</p>
+                  <p><strong>3.</strong> They enter their email and create a password</p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Signup Link (Copy & Share)
+                </label>
+                <div className="flex">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}/login`}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/login`);
+                      setMessage('✅ Link copied to clipboard!');
+                      setTimeout(() => setMessage(''), 3000);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h3 className="font-medium text-blue-900 mb-2">How Magic Link Access Works</h3>
+          <h3 className="font-medium text-blue-900 mb-2">How User Invitations Work</h3>
           <div className="text-sm text-blue-800 space-y-2">
-            <p><strong>1. Invite users</strong> by adding their email addresses here</p>
-            <p><strong>2. Share the magic link URL:</strong> <code className="bg-blue-100 px-2 py-1 rounded">https://sbaycrm.netlify.app/magic-login</code></p>
-            <p><strong>3. They enter their email</strong> and get a secure login link via email</p>
-            <p><strong>4. One-click access</strong> - no passwords needed!</p>
+            <p><strong>1. Invite users</strong> by adding their email addresses and assigning roles</p>
+            <p><strong>2. Share the signup URL:</strong> <code className="bg-blue-100 px-2 py-1 rounded">https://sbaycrm.netlify.app/login</code></p>
+            <p><strong>3. They click "Need to set up account?"</strong> and enter their email</p>
+            <p><strong>4. Create password and sign in</strong> - secure email/password authentication</p>
           </div>
         </div>
 
@@ -260,7 +316,7 @@ export default function InvitationsPage() {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No invitations yet</h3>
               <p className="text-gray-600 mb-6">
-                Invite your team and clients to access the CRM system.
+                Invite your team and clients to create accounts and access the CRM system.
               </p>
               <button
                 onClick={() => setShowForm(true)}
