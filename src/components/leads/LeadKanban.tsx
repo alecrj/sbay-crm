@@ -6,6 +6,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { supabase, Lead } from "@/lib/supabase";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
+import { useUserRole } from "@/contexts/UserRoleContext";
 import LeadForm from "./LeadForm";
 import LeadCard from "./LeadCard";
 
@@ -24,6 +25,7 @@ const LeadKanban: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { isOpen, openModal, closeModal } = useModal();
+  const { isAdmin } = useUserRole();
 
   useEffect(() => {
     fetchLeads();
@@ -37,10 +39,32 @@ const LeadKanban: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching leads:', error);
+        console.error('Error details:', {
+          message: error.message,
+          hint: error.hint,
+          details: error.details,
+          code: error.code
+        });
+
+        // If table doesn't exist, show helpful message
+        if (error.code === '42P01') {
+          console.log('Leads table does not exist yet. Please run the CREATE_LEADS_TABLE.sql script.');
+          setLeads([]);
+          return;
+        }
+
+        throw new Error(`Database error: ${error.message}`);
+      }
+
       setLeads(data || []);
     } catch (error) {
       console.error('Error fetching leads:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
     } finally {
       setLoading(false);
     }
@@ -52,6 +76,7 @@ const LeadKanban: React.FC = () => {
   };
 
   const handleEditLead = (lead: Lead) => {
+    if (!isAdmin) return; // Prevent editing for non-admin users
     setSelectedLead(lead);
     openModal();
   };
@@ -62,6 +87,8 @@ const LeadKanban: React.FC = () => {
   };
 
   const moveLead = async (leadId: string, newStatus: Lead['status']) => {
+    if (!isAdmin) return; // Prevent moving leads for non-admin users
+
     try {
       const { error } = await supabase
         .from('leads')
@@ -129,18 +156,20 @@ const LeadKanban: React.FC = () => {
               Lead Pipeline
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Track and manage your sales leads through the pipeline
+              {isAdmin ? "Track and manage your sales leads through the pipeline" : "View sales leads and their current status"}
             </p>
           </div>
-          <button
-            onClick={handleAddLead}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add New Lead
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleAddLead}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add New Lead
+            </button>
+          )}
         </div>
 
         {/* Search */}
@@ -164,6 +193,7 @@ const LeadKanban: React.FC = () => {
               onMoveLead={moveLead}
               onEditLead={handleEditLead}
               getPriorityColor={getPriorityColor}
+              isAdmin={isAdmin}
             />
           ))}
         </div>
@@ -191,6 +221,7 @@ interface KanbanColumnProps {
   onMoveLead: (leadId: string, newStatus: Lead['status']) => void;
   onEditLead: (lead: Lead) => void;
   getPriorityColor: (priority: Lead['priority']) => string;
+  isAdmin: boolean;
 }
 
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
@@ -199,14 +230,17 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onMoveLead,
   onEditLead,
   getPriorityColor,
+  isAdmin,
 }) => {
   const [{ isOver }, drop] = useDrop({
     accept: 'lead',
     drop: (item: { id: string }) => {
-      onMoveLead(item.id, status.id as Lead['status']);
+      if (isAdmin) {
+        onMoveLead(item.id, status.id as Lead['status']);
+      }
     },
     collect: (monitor) => ({
-      isOver: monitor.isOver(),
+      isOver: monitor.isOver() && isAdmin,
     }),
   });
 
@@ -238,6 +272,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             lead={lead}
             onEdit={onEditLead}
             priorityColor={getPriorityColor(lead.priority)}
+            isAdmin={isAdmin}
           />
         ))}
 
@@ -255,16 +290,19 @@ interface DraggableLeadCardProps {
   lead: Lead;
   onEdit: (lead: Lead) => void;
   priorityColor: string;
+  isAdmin: boolean;
 }
 
 const DraggableLeadCard: React.FC<DraggableLeadCardProps> = ({
   lead,
   onEdit,
   priorityColor,
+  isAdmin,
 }) => {
   const [{ isDragging }, drag] = useDrag({
     type: 'lead',
     item: { id: lead.id },
+    canDrag: isAdmin,
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
@@ -272,13 +310,14 @@ const DraggableLeadCard: React.FC<DraggableLeadCardProps> = ({
 
   return (
     <div
-      ref={drag}
-      className={`cursor-move ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+      ref={isAdmin ? drag : null}
+      className={`${isAdmin ? 'cursor-move' : 'cursor-default'} ${isDragging ? 'opacity-50' : 'opacity-100'}`}
     >
       <LeadCard
         lead={lead}
         onEdit={onEdit}
         priorityColor={priorityColor}
+        isAdmin={isAdmin}
       />
     </div>
   );

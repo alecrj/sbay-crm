@@ -32,10 +32,30 @@ const RecentLeads: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching recent leads:', error);
+        console.error('Error details:', {
+          message: error.message,
+          hint: error.hint,
+          details: error.details,
+          code: error.code
+        });
+
+        // If table doesn't exist, show empty state
+        if (error.code === '42P01') {
+          console.log('Leads table does not exist yet. Please run the CREATE_LEADS_TABLE.sql script.');
+          setLeads([]);
+          return;
+        }
+
+        throw error;
+      }
+
       setLeads(data || []);
     } catch (error) {
       console.error('Error fetching recent leads:', error);
+      // Set empty array on any error to prevent UI crashes
+      setLeads([]);
     } finally {
       setIsLoading(false);
     }

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useUserRole } from '../../../contexts/UserRoleContext';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 
 interface Invitation {
@@ -17,6 +19,8 @@ interface Invitation {
 
 export default function InvitationsPage() {
   const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const router = useRouter();
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -25,6 +29,12 @@ export default function InvitationsPage() {
     role: 'user'
   });
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (!roleLoading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, roleLoading, router]);
 
   useEffect(() => {
     loadInvitations();
@@ -114,15 +124,19 @@ export default function InvitationsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading invitations...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
+  }
+
+  if (!isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   return (

@@ -11,15 +11,15 @@ export interface Property {
   title: string
   type: 'warehouse' | 'office' | 'industrial' | 'flex-space' | 'distribution'
   location: string
-  county: 'Miami-Dade' | 'Broward' | 'Palm Beach'
+  county?: 'Miami-Dade' | 'Broward' | 'Palm Beach'
   price: string
   size: string
   available: boolean
   featured: boolean
   description?: string
   image?: string
-  gallery?: string[]
-  features: string[]
+  gallery?: any
+  features?: any
   street_address?: string
   city?: string
   state?: string

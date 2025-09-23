@@ -8,9 +8,10 @@ interface LeadCardProps {
   lead: Lead;
   onEdit: (lead: Lead) => void;
   priorityColor: string;
+  isAdmin?: boolean;
 }
 
-const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, priorityColor }) => {
+const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, priorityColor, isAdmin = true }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -63,8 +64,8 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, priorityColor }) => {
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200 border-l-4 ${priorityColor}`}
-      onClick={() => onEdit(lead)}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-shadow duration-200 border-l-4 ${priorityColor} ${isAdmin ? 'hover:shadow-md cursor-pointer' : 'cursor-default'}`}
+      onClick={isAdmin ? () => onEdit(lead) : undefined}
     >
       <div className="p-4">
         {/* Header */}

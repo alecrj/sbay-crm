@@ -45,10 +45,30 @@ const UpcomingAppointments: React.FC = () => {
         .order('start_time', { ascending: true })
         .limit(8);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error fetching upcoming appointments:', error);
+        console.error('Error details:', {
+          message: error.message,
+          hint: error.hint,
+          details: error.details,
+          code: error.code
+        });
+
+        // If table doesn't exist, show empty state
+        if (error.code === '42P01') {
+          console.log('Appointments table does not exist yet. This feature will be available when calendar functionality is implemented.');
+          setAppointments([]);
+          return;
+        }
+
+        throw error;
+      }
+
       setAppointments(data || []);
     } catch (error) {
       console.error('Error fetching upcoming appointments:', error);
+      // Set empty array on any error to prevent UI crashes
+      setAppointments([]);
     } finally {
       setIsLoading(false);
     }

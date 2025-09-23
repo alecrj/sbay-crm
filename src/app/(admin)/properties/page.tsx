@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useUserRole } from '../../../contexts/UserRoleContext';
+import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 
 interface Property {
@@ -21,8 +23,17 @@ interface Property {
 
 export default function PropertiesPage() {
   const { user } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!roleLoading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, roleLoading, router]);
+
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [formData, setFormData] = useState({
@@ -48,10 +59,30 @@ export default function PropertiesPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error loading properties:', error);
+        console.error('Error details:', {
+          message: error.message,
+          hint: error.hint,
+          details: error.details,
+          code: error.code
+        });
+
+        // If table doesn't exist, show empty state
+        if (error.code === '42P01') {
+          console.log('Properties table does not exist yet. Please run the CREATE_PROPERTIES_TABLE.sql script.');
+          setProperties([]);
+          return;
+        }
+
+        throw error;
+      }
+
       setProperties(data || []);
     } catch (error) {
       console.error('Error loading properties:', error);
+      // Set empty array on any error to prevent UI crashes
+      setProperties([]);
     } finally {
       setLoading(false);
     }
@@ -59,6 +90,10 @@ export default function PropertiesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log('🚀 Form submission started');
+    console.log('📝 Form data:', formData);
+    console.log('✏️ Editing property:', editingProperty);
 
     try {
       if (editingProperty) {
@@ -72,23 +107,32 @@ export default function PropertiesPage() {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        console.log('➕ Inserting new property...');
+        const { data, error } = await supabase
           .from('properties')
-          .insert([{
-            ...formData,
-            id: crypto.randomUUID(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }]);
+          .insert([formData])
+          .select();
 
+        console.log('💾 Insert result:', { data, error });
         if (error) throw error;
       }
 
+      console.log('✅ Property saved successfully');
       await loadProperties();
       resetForm();
     } catch (error) {
       console.error('Error saving property:', error);
-      alert('Error saving property. Please try again.');
+
+      // Provide specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes('relation "properties" does not exist')) {
+          alert('Properties table not found. Please run the CREATE_PROPERTIES_TABLE.sql script in Supabase first.');
+        } else {
+          alert(`Error saving property: ${error.message}`);
+        }
+      } else {
+        alert('Error saving property. Please check the console for details.');
+      }
     }
   };
 
@@ -140,15 +184,19 @@ export default function PropertiesPage() {
     setShowForm(false);
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading properties...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
+  }
+
+  if (!isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   return (
@@ -174,27 +222,41 @@ export default function PropertiesPage() {
           </div>
         </div>
 
-        {/* Form Modal */}
+        {/* Full Screen Form Modal */}
         {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold">
+          <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 overflow-y-auto">
+            {/* Header */}
+            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 sticky top-0">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                     {editingProperty ? 'Edit Property' : 'Add New Property'}
-                  </h2>
-                  <button
-                    onClick={resetForm}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    ✕
-                  </button>
+                  </h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Create a professional property listing for your portfolio
+                  </p>
                 </div>
+                <button
+                  onClick={resetForm}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Cancel
+                </button>
+              </div>
+            </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+            {/* Content */}
+            <div className="max-w-4xl mx-auto px-6 py-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {/* Basic Information Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Property Title *
                       </label>
                       <input
@@ -202,19 +264,19 @@ export default function PropertiesPage() {
                         required
                         value={formData.title}
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Warehouse in Miami"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Type *
                       </label>
                       <select
                         required
                         value={formData.type}
                         onChange={(e) => setFormData({...formData, type: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="warehouse">Warehouse</option>
                         <option value="office">Office Space</option>
@@ -224,10 +286,14 @@ export default function PropertiesPage() {
                       </select>
                     </div>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                {/* Pricing & Details Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pricing & Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Location *
                       </label>
                       <input
@@ -235,12 +301,12 @@ export default function PropertiesPage() {
                         required
                         value={formData.location}
                         onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Miami, FL"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Size *
                       </label>
                       <input
@@ -248,7 +314,7 @@ export default function PropertiesPage() {
                         required
                         value={formData.size}
                         onChange={(e) => setFormData({...formData, size: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="10,000 SF"
                       />
                     </div>
@@ -256,7 +322,7 @@ export default function PropertiesPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Price *
                       </label>
                       <input
@@ -264,76 +330,91 @@ export default function PropertiesPage() {
                         required
                         value={formData.price}
                         onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="$8.50/SF/Year"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Image URL
                       </label>
                       <input
                         type="url"
                         value={formData.image}
                         onChange={(e) => setFormData({...formData, image: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="https://example.com/image.jpg"
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Description *
-                    </label>
+                {/* Description & Settings Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Description & Settings</h3>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Description *
+                      </label>
                     <textarea
                       required
                       rows={4}
                       value={formData.description}
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Property description, features, amenities..."
                     />
                   </div>
 
-                  <div className="flex gap-6">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.featured}
-                        onChange={(e) => setFormData({...formData, featured: e.target.checked})}
-                        className="mr-2"
-                      />
-                      Featured Property
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.available}
-                        onChange={(e) => setFormData({...formData, available: e.target.checked})}
-                        className="mr-2"
-                      />
-                      Available
-                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <label className="flex items-center p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.featured}
+                          onChange={(e) => setFormData({...formData, featured: e.target.checked})}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">Featured Property</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Display prominently on website</div>
+                        </div>
+                      </label>
+                      <label className="flex items-center p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.available}
+                          onChange={(e) => setFormData({...formData, available: e.target.checked})}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">Available for Lease</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Show as available to prospects</div>
+                        </div>
+                      </label>
+                    </div>
                   </div>
+                </div>
 
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      type="submit"
-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-                    >
-                      {editingProperty ? 'Update Property' : 'Add Property'}
-                    </button>
+                {/* Submit Section */}
+                <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4 -mx-6">
+                  <div className="flex gap-4 justify-end">
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400"
+                      className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium transition-colors"
                     >
                       Cancel
                     </button>
+                    <button
+                      type="submit"
+                      className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors shadow-sm"
+                    >
+                      {editingProperty ? 'Update Property' : 'Create Property'}
+                    </button>
                   </div>
-                </form>
-              </div>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -421,16 +502,6 @@ export default function PropertiesPage() {
           </div>
         )}
 
-        {/* Website Sync Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-6">
-          <h3 className="font-medium text-blue-900 mb-2">🌐 Website Integration</h3>
-          <div className="text-sm text-blue-800 space-y-2">
-            <p>• Properties you add here will automatically sync to your website at <strong>https://shabay.netlify.app</strong></p>
-            <p>• Featured properties appear prominently on the homepage</p>
-            <p>• Available properties show up in search results and property listings</p>
-            <p>• Property inquiries from the website come directly to your CRM as leads</p>
-          </div>
-        </div>
       </div>
     </div>
   );
