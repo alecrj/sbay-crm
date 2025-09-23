@@ -125,7 +125,7 @@ To learn more about pro version features and pricing, visit our [pricing page](h
 
 ## Changelog
 
-### Version 2.0.2 - [March 25, 2025]
+### Version 2.0.2 - [March 25, 2025] - Updated Invitation System
 
 - Upgraded to Next v15.2.3 for [CVE-2025-29927](https://nextjs.org/blog/cve-2025-29927) concerns
 - Included overrides vectormap for packages to prevent peer dependency errors during installation.
