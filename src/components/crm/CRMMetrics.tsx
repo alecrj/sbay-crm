@@ -54,7 +54,7 @@ const CRMMetrics: React.FC = () => {
       // Fetch properties
       const { data: properties } = await supabase
         .from('properties')
-        .select('status, created_at');
+        .select('created_at');
 
       // Calculate metrics
       const totalLeads = leads?.length || 0;
@@ -74,9 +74,7 @@ const CRMMetrics: React.FC = () => {
       const conversionRate = totalLeads > 0 ?
         Math.round((closedDeals / totalLeads) * 100) : 0;
 
-      const propertiesListed = properties?.filter(prop =>
-        prop.status === 'available' || prop.status === 'featured'
-      ).length || 0;
+      const propertiesListed = properties?.length || 0;
 
       setStats({
         totalLeads,
