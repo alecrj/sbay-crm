@@ -41,6 +41,9 @@ export default function PropertiesPage() {
     type: 'warehouse',
     location: '',
     county: '',
+    street_address: '',
+    city: '',
+    zip_code: '',
     size: '',
     price: '',
     description: '',
@@ -84,6 +87,9 @@ export default function PropertiesPage() {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Custom feature input
+  const [customFeature, setCustomFeature] = useState('');
+
   // Helper functions
   const addFeature = (feature: string) => {
     if (!formData.features.includes(feature)) {
@@ -93,6 +99,13 @@ export default function PropertiesPage() {
 
   const removeFeature = (feature: string) => {
     setFormData({...formData, features: formData.features.filter(f => f !== feature)});
+  };
+
+  const addCustomFeature = () => {
+    if (customFeature.trim() && !formData.features.includes(customFeature.trim())) {
+      setFormData({...formData, features: [...formData.features, customFeature.trim()]});
+      setCustomFeature('');
+    }
   };
 
   const handleImageUpload = async (file: File) => {
@@ -230,6 +243,9 @@ export default function PropertiesPage() {
       type: property.type,
       location: property.location,
       county: property.county || '',
+      street_address: property.street_address || '',
+      city: property.city || '',
+      zip_code: property.zip_code || '',
       size: property.size,
       price: property.price,
       description: property.description,
@@ -263,6 +279,9 @@ export default function PropertiesPage() {
       type: 'warehouse',
       location: '',
       county: '',
+      street_address: '',
+      city: '',
+      zip_code: '',
       size: '',
       price: '',
       description: '',
@@ -273,6 +292,7 @@ export default function PropertiesPage() {
     });
     setEditingProperty(null);
     setShowForm(false);
+    setCustomFeature('');
   };
 
   if (loading || roleLoading) {
@@ -382,10 +402,11 @@ export default function PropertiesPage() {
                 {/* Pricing & Details Section */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pricing & Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-6">
+                    {/* Main Location (for display/search) */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Location *
+                        Location Summary *
                       </label>
                       <input
                         type="text"
@@ -393,24 +414,72 @@ export default function PropertiesPage() {
                         value={formData.location}
                         onChange={(e) => setFormData({...formData, location: e.target.value})}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Miami, FL"
+                        placeholder="Doral, Miami-Dade, FL"
                       />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Brief location description for display (e.g., "Doral, Miami-Dade, FL")
+                      </p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        County
-                      </label>
-                      <select
-                        value={formData.county}
-                        onChange={(e) => setFormData({...formData, county: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select County</option>
-                        <option value="Miami-Dade">Miami-Dade</option>
-                        <option value="Broward">Broward</option>
-                        <option value="Palm Beach">Palm Beach</option>
-                      </select>
+
+                    {/* Detailed Address Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Street Address
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.street_address}
+                          onChange={(e) => setFormData({...formData, street_address: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="1234 Industrial Blvd"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          City *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.city}
+                          onChange={(e) => setFormData({...formData, city: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Miami"
+                        />
+                      </div>
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          County
+                        </label>
+                        <select
+                          value={formData.county}
+                          onChange={(e) => setFormData({...formData, county: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select County</option>
+                          <option value="Miami-Dade">Miami-Dade</option>
+                          <option value="Broward">Broward</option>
+                          <option value="Palm Beach">Palm Beach</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          ZIP Code
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.zip_code}
+                          onChange={(e) => setFormData({...formData, zip_code: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="33166"
+                        />
+                      </div>
+                    </div>
+                  </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Size *
@@ -596,6 +665,29 @@ export default function PropertiesPage() {
                               + {feature}
                             </button>
                           ))}
+                      </div>
+                    </div>
+
+                    {/* Custom Feature Input */}
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Add custom feature:</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={customFeature}
+                          onChange={(e) => setCustomFeature(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addCustomFeature())}
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          placeholder="Enter custom feature (e.g., 'Fiber Optic Ready')"
+                        />
+                        <button
+                          type="button"
+                          onClick={addCustomFeature}
+                          disabled={!customFeature.trim()}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium transition-colors"
+                        >
+                          Add
+                        </button>
                       </div>
                     </div>
                   </div>
