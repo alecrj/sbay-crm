@@ -1,45 +1,78 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 
 export default function AuthCallback() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Handle the auth callback
+        setIsLoading(true);
+
+        // Handle the auth callback from Supabase
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
           console.error('Auth callback error:', error);
-          router.push('/magic-login?error=auth_failed');
+          setError('Authentication failed. Please try again.');
+          setTimeout(() => router.push('/login?error=auth_failed'), 2000);
           return;
         }
 
         if (data.session) {
-          // User is logged in, redirect to main dashboard
-          router.push('/');
+          // Check if this is a password reset
+          const type = searchParams.get('type');
+
+          if (type === 'recovery') {
+            // Redirect to password reset form
+            router.push('/login?action=reset_password');
+          } else {
+            // Regular login, redirect to dashboard
+            router.push('/');
+          }
         } else {
           // No session, redirect back to login
-          router.push('/magic-login?error=no_session');
+          setTimeout(() => router.push('/login?error=no_session'), 2000);
         }
       } catch (error) {
         console.error('Auth callback error:', error);
-        router.push('/magic-login?error=unexpected');
+        setError('An unexpected error occurred.');
+        setTimeout(() => router.push('/login?error=unexpected'), 2000);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     handleAuthCallback();
-  }, [router]);
+  }, [router, searchParams]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">Completing sign in...</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="text-center bg-white/10 backdrop-blur-sm p-8 rounded-2xl border border-white/20 shadow-xl">
+        {error ? (
+          <div className="space-y-4">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-red-200">{error}</p>
+            <p className="text-blue-300 text-sm">Redirecting to login...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto"></div>
+            <p className="text-white">
+              {isLoading ? 'Completing authentication...' : 'Redirecting...'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -11,17 +11,34 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const { user, signIn, signUp, resetPassword } = useAuth();
   const router = useRouter();
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
 
   useEffect(() => {
     // Redirect if already logged in
     if (user) {
       router.push('/');
     }
-  }, [user, router]);
+
+    // Check if this is a password reset
+    if (searchParams) {
+      const action = searchParams.get('action');
+      const error = searchParams.get('error');
+
+      if (action === 'reset_password') {
+        setIsPasswordReset(true);
+        setMessage('You can now set a new password for your account.');
+      }
+
+      if (error) {
+        setMessage('There was an issue with authentication. Please try again.');
+      }
+    }
+  }, [user, router, searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,10 +142,53 @@ export default function LoginPage() {
       const { error } = await resetPassword(email);
       if (error) throw error;
 
-      setMessage('Password reset email sent! Check your inbox.');
+      setMessage('Password reset email sent! Check your inbox for the reset link.');
     } catch (error: any) {
       console.error('Reset password error:', error);
       setMessage(`Error: ${error.message || 'Reset failed'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!password.trim() || !confirmPassword.trim()) {
+      setMessage('Please enter and confirm your new password');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setMessage('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setMessage('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) throw error;
+
+      setMessage('Password updated successfully! You can now sign in.');
+      setIsPasswordReset(false);
+      setPassword('');
+      setConfirmPassword('');
+
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, '/login');
+    } catch (error: any) {
+      console.error('Password update error:', error);
+      setMessage(`Error: ${error.message || 'Password update failed'}`);
     } finally {
       setLoading(false);
     }
@@ -146,15 +206,20 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-white">
-            {isSignUp ? 'Complete Setup' : 'Welcome Back'}
+            {isPasswordReset ? 'Set New Password' : isSignUp ? 'Complete Setup' : 'Welcome Back'}
           </h2>
           <p className="mt-2 text-blue-200">
-            {isSignUp ? 'Create your password to access your account' : 'Sign in to your CRM dashboard'}
+            {isPasswordReset
+              ? 'Enter your new password below'
+              : isSignUp
+                ? 'Create your password to access your account'
+                : 'Sign in to your CRM dashboard'
+            }
           </p>
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl border border-white/20 shadow-xl space-y-6">
-          <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-6">
+          <form onSubmit={isPasswordReset ? handlePasswordReset : isSignUp ? handleSignUp : handleLogin} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
                 Email Address
