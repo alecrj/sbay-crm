@@ -40,13 +40,100 @@ export default function PropertiesPage() {
     title: '',
     type: 'warehouse',
     location: '',
+    county: '',
     size: '',
     price: '',
     description: '',
     featured: false,
     available: true,
-    image: ''
+    image: '',
+    features: [] as string[]
   });
+
+  // Available feature options
+  const availableFeatures = [
+    'Loading Docks',
+    'High Ceilings',
+    'Modern HVAC',
+    'Security System',
+    'Truck Access',
+    'City Views',
+    'Furnished',
+    'Conference Rooms',
+    'High-Speed Internet',
+    'Parking Included',
+    'Overhead Cranes',
+    'Heavy Power',
+    'Rail Access',
+    'Large Lot',
+    'Specialized Equipment',
+    'Dock High',
+    '32\' Clear',
+    'Highway Access',
+    'Grade Level',
+    'Flex Space',
+    'Cross Dock',
+    'Airport Access',
+    '30\' Clear',
+    '3-Phase Power',
+    'Crane Ready',
+    'Secured Yard'
+  ];
+
+  // Image upload states
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Helper functions
+  const addFeature = (feature: string) => {
+    if (!formData.features.includes(feature)) {
+      setFormData({...formData, features: [...formData.features, feature]});
+    }
+  };
+
+  const removeFeature = (feature: string) => {
+    setFormData({...formData, features: formData.features.filter(f => f !== feature)});
+  };
+
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // For now, we'll use a placeholder implementation
+      // In production, you'd upload to a service like Cloudinary, AWS S3, etc.
+      const imageUrl = URL.createObjectURL(file);
+      setFormData({...formData, image: imageUrl});
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleImageUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
 
   useEffect(() => {
     loadProperties();
@@ -136,18 +223,20 @@ export default function PropertiesPage() {
     }
   };
 
-  const handleEdit = (property: Property) => {
+  const handleEdit = (property: any) => {
     setEditingProperty(property);
     setFormData({
       title: property.title,
       type: property.type,
       location: property.location,
+      county: property.county || '',
       size: property.size,
       price: property.price,
       description: property.description,
       featured: property.featured,
       available: property.available,
-      image: property.image || ''
+      image: property.image || '',
+      features: property.features || []
     });
     setShowForm(true);
   };
@@ -173,12 +262,14 @@ export default function PropertiesPage() {
       title: '',
       type: 'warehouse',
       location: '',
+      county: '',
       size: '',
       price: '',
       description: '',
       featured: false,
       available: true,
-      image: ''
+      image: '',
+      features: []
     });
     setEditingProperty(null);
     setShowForm(false);
@@ -307,6 +398,21 @@ export default function PropertiesPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        County
+                      </label>
+                      <select
+                        value={formData.county}
+                        onChange={(e) => setFormData({...formData, county: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select County</option>
+                        <option value="Miami-Dade">Miami-Dade</option>
+                        <option value="Broward">Broward</option>
+                        <option value="Palm Beach">Palm Beach</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Size *
                       </label>
                       <input
@@ -334,17 +440,94 @@ export default function PropertiesPage() {
                         placeholder="$8.50/SF/Year"
                       />
                     </div>
-                    <div>
+                    <div className="col-span-full">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Image URL
+                        Property Image
                       </label>
-                      <input
-                        type="url"
-                        value={formData.image}
-                        onChange={(e) => setFormData({...formData, image: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="https://example.com/image.jpg"
-                      />
+
+                      {/* Drag & Drop Upload Area */}
+                      <div
+                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                          dragActive
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+                        }`}
+                        onDrop={handleDrop}
+                        onDragOver={handleDrag}
+                        onDragEnter={handleDrag}
+                        onDragLeave={handleDrag}
+                      >
+                        {formData.image ? (
+                          <div className="space-y-4">
+                            <img
+                              src={formData.image}
+                              alt="Property preview"
+                              className="mx-auto h-32 w-auto rounded-lg object-cover"
+                            />
+                            <div className="flex gap-2 justify-center">
+                              <button
+                                type="button"
+                                onClick={() => setFormData({...formData, image: ''})}
+                                className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+                              >
+                                Remove
+                              </button>
+                              <label className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 cursor-pointer">
+                                Change
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="mx-auto h-12 w-12 text-gray-400">
+                              <svg fill="none" stroke="currentColor" viewBox="0 0 48 48">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-gray-600 dark:text-gray-400">
+                                <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span> or drag and drop
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, JPEG up to 10MB</p>
+                            </div>
+                            <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer">
+                              {uploading ? 'Uploading...' : 'Select Image'}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploading}
+                                onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
+                              />
+                            </label>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Alternative: Manual URL input */}
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Or enter image URL
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.image}
+                          onChange={(e) => setFormData({...formData, image: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="https://example.com/image.jpg"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -365,6 +548,56 @@ export default function PropertiesPage() {
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Property description, features, amenities..."
                     />
+                  </div>
+
+                  {/* Property Features */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                      Property Features
+                    </label>
+
+                    {/* Selected Features */}
+                    {formData.features.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Selected features:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.features.map((feature) => (
+                            <span
+                              key={feature}
+                              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                            >
+                              {feature}
+                              <button
+                                type="button"
+                                onClick={() => removeFeature(feature)}
+                                className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Available Features to Add */}
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Add features:</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                        {availableFeatures
+                          .filter(feature => !formData.features.includes(feature))
+                          .map((feature) => (
+                            <button
+                              key={feature}
+                              type="button"
+                              onClick={() => addFeature(feature)}
+                              className="text-left px-2 py-1 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+                            >
+                              + {feature}
+                            </button>
+                          ))}
+                      </div>
+                    </div>
                   </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
