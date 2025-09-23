@@ -39,23 +39,40 @@ const CalendarManager: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Fetch events from our API which combines Google Calendar and database
-      const response = await fetch('/api/calendar/events');
-      if (!response.ok) throw new Error('Failed to fetch events');
+      // Fetch appointments directly from Supabase
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          leads (
+            id, name, email, phone, company
+          )
+        `)
+        .order('start_time', { ascending: true });
 
-      const data = await response.json();
+      if (error) {
+        console.error('Error fetching appointments:', error);
+        return;
+      }
 
-      // Convert to FullCalendar format
-      const formattedEvents: FullCalendarEvent[] = data.events.map((event: CalendarEvent) => ({
-        id: event.id || '',
-        title: event.summary,
-        start: event.start.dateTime,
-        end: event.end.dateTime,
-        backgroundColor: getEventColor(event.summary),
+      // Convert appointments to FullCalendar format
+      const formattedEvents: FullCalendarEvent[] = (appointments || []).map((appointment) => ({
+        id: appointment.id,
+        title: appointment.title,
+        start: appointment.start_time,
+        end: appointment.end_time,
+        backgroundColor: getEventColor(appointment.title, appointment.status),
         extendedProps: {
-          description: event.description,
-          location: event.location,
-          attendees: event.attendees?.map(a => a.email) || [],
+          description: appointment.description,
+          location: appointment.location,
+          attendees: appointment.attendees || [],
+          leadId: appointment.lead_id,
+          appointmentId: appointment.id,
+          status: appointment.status,
+          leadName: appointment.leads?.name,
+          leadEmail: appointment.leads?.email,
+          leadPhone: appointment.leads?.phone,
+          leadCompany: appointment.leads?.company,
         }
       }));
 
@@ -67,7 +84,14 @@ const CalendarManager: React.FC = () => {
     }
   };
 
-  const getEventColor = (title: string): string => {
+  const getEventColor = (title: string, status?: string): string => {
+    // Color by status first
+    if (status === 'confirmed') return '#10B981'; // Green
+    if (status === 'pending') return '#F59E0B'; // Amber
+    if (status === 'cancelled') return '#EF4444'; // Red
+    if (status === 'completed') return '#6B7280'; // Gray
+
+    // Fallback to title-based colors
     if (title.toLowerCase().includes('consultation')) return '#3B82F6';
     if (title.toLowerCase().includes('showing')) return '#10B981';
     if (title.toLowerCase().includes('meeting')) return '#8B5CF6';
