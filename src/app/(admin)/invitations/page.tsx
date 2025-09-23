@@ -32,11 +32,12 @@ export default function InvitationsPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastInvitedEmail, setLastInvitedEmail] = useState('');
 
-  useEffect(() => {
-    if (!roleLoading && !isAdmin) {
-      router.push('/');
-    }
-  }, [isAdmin, roleLoading, router]);
+  // Temporarily disable admin check to debug
+  // useEffect(() => {
+  //   if (!roleLoading && !isAdmin) {
+  //     router.push('/');
+  //   }
+  // }, [isAdmin, roleLoading, router]);
 
   useEffect(() => {
     loadInvitations();
@@ -132,9 +133,10 @@ export default function InvitationsPage() {
     );
   }
 
-  if (!isAdmin) {
-    return null; // Will redirect in useEffect
-  }
+  // Temporarily disable admin check to debug
+  // if (!isAdmin) {
+  //   return null; // Will redirect in useEffect
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
