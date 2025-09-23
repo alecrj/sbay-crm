@@ -42,6 +42,12 @@ const navItems: NavItem[] = [
     path: "/leads",
   },
   {
+    icon: <CalenderIcon />,
+    name: "Appointments",
+    path: "/appointments",
+    adminOnly: true,
+  },
+  {
     icon: <BoxIcon />,
     name: "Properties",
     path: "/properties",

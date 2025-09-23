@@ -35,6 +35,13 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('upcoming'); // 'all', 'upcoming', 'today', 'past'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'scheduled', 'confirmed', 'completed', 'cancelled'
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleAppointment, setRescheduleAppointment] = useState<Appointment | null>(null);
+  const [rescheduleForm, setRescheduleForm] = useState({
+    newDate: '',
+    newTime: '',
+    reason: ''
+  });
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -134,6 +141,48 @@ export default function AppointmentsPage() {
     }
   };
 
+  const handleReschedule = (appointment: Appointment) => {
+    setRescheduleAppointment(appointment);
+    setRescheduleForm({
+      newDate: '',
+      newTime: '',
+      reason: ''
+    });
+    setShowRescheduleModal(true);
+  };
+
+  const submitReschedule = async () => {
+    if (!rescheduleAppointment || !rescheduleForm.newDate || !rescheduleForm.newTime) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch('/.netlify/functions/reschedule-appointment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appointmentId: rescheduleAppointment.id,
+          newDate: rescheduleForm.newDate,
+          newTime: rescheduleForm.newTime,
+          reason: rescheduleForm.reason,
+          requestedBy: 'Admin'
+        })
+      });
+
+      if (response.ok) {
+        alert('Appointment rescheduled successfully');
+        setShowRescheduleModal(false);
+        loadAppointments(); // Refresh appointments
+      } else {
+        throw new Error('Failed to reschedule appointment');
+      }
+    } catch (error) {
+      console.error('Error rescheduling appointment:', error);
+      alert('Failed to reschedule appointment. Please try again.');
+    }
+  };
+
   const getFilteredAppointments = () => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -223,15 +272,27 @@ export default function AppointmentsPage() {
                 Manage your scheduled appointments and send reminders
               </p>
             </div>
-            <button
-              onClick={sendRemindersManually}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Send Reminders</span>
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={sendRemindersManually}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Send Reminders</span>
+              </button>
+
+              <a
+                href="/appointments/analytics"
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>Analytics</span>
+              </a>
+            </div>
           </div>
         </div>
 
@@ -377,6 +438,13 @@ export default function AppointmentsPage() {
                       >
                         View Lead
                       </a>
+
+                      <button
+                        onClick={() => handleReschedule(appointment)}
+                        className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-center hover:bg-yellow-200"
+                      >
+                        Reschedule
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -384,6 +452,99 @@ export default function AppointmentsPage() {
             })
           )}
         </div>
+
+        {/* Reschedule Modal */}
+        {showRescheduleModal && rescheduleAppointment && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Reschedule Appointment
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {rescheduleAppointment.title} with {rescheduleAppointment.leads?.name}
+                </p>
+              </div>
+
+              <div className="px-6 py-4">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={rescheduleForm.newDate}
+                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, newDate: e.target.value })}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      New Time *
+                    </label>
+                    <select
+                      value={rescheduleForm.newTime}
+                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, newTime: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Select time...</option>
+                      <option value="9:00 AM">9:00 AM</option>
+                      <option value="9:30 AM">9:30 AM</option>
+                      <option value="10:00 AM">10:00 AM</option>
+                      <option value="10:30 AM">10:30 AM</option>
+                      <option value="11:00 AM">11:00 AM</option>
+                      <option value="11:30 AM">11:30 AM</option>
+                      <option value="12:00 PM">12:00 PM</option>
+                      <option value="12:30 PM">12:30 PM</option>
+                      <option value="1:00 PM">1:00 PM</option>
+                      <option value="1:30 PM">1:30 PM</option>
+                      <option value="2:00 PM">2:00 PM</option>
+                      <option value="2:30 PM">2:30 PM</option>
+                      <option value="3:00 PM">3:00 PM</option>
+                      <option value="3:30 PM">3:30 PM</option>
+                      <option value="4:00 PM">4:00 PM</option>
+                      <option value="4:30 PM">4:30 PM</option>
+                      <option value="5:00 PM">5:00 PM</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reason for Rescheduling (Optional)
+                    </label>
+                    <textarea
+                      value={rescheduleForm.reason}
+                      onChange={(e) => setRescheduleForm({ ...rescheduleForm, reason: e.target.value })}
+                      placeholder="Brief explanation for the client..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowRescheduleModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitReschedule}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                >
+                  Reschedule Appointment
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
