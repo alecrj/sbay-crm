@@ -112,24 +112,34 @@ const CRMMetrics: React.FC = () => {
     color?: 'blue' | 'green' | 'purple' | 'orange' | 'red';
   }) => {
     const colorClasses = {
-      blue: 'bg-blue-500',
-      green: 'bg-green-500',
-      purple: 'bg-purple-500',
-      orange: 'bg-orange-500',
-      red: 'bg-red-500',
+      blue: 'bg-gradient-to-br from-blue-500 to-blue-600',
+      green: 'bg-gradient-to-br from-green-500 to-green-600',
+      purple: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      orange: 'bg-gradient-to-br from-orange-500 to-orange-600',
+      red: 'bg-gradient-to-br from-red-500 to-red-600',
+    };
+
+    const bgClasses = {
+      blue: 'bg-blue-50 dark:bg-blue-900/10',
+      green: 'bg-green-50 dark:bg-green-900/10',
+      purple: 'bg-purple-50 dark:bg-purple-900/10',
+      orange: 'bg-orange-50 dark:bg-orange-900/10',
+      red: 'bg-red-50 dark:bg-red-900/10',
     };
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`w-12 h-12 ${colorClasses[color]} rounded-lg flex items-center justify-center text-white`}>
+      <div className={`${bgClasses[color]} border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 p-6 group hover:scale-[1.02]`}>
+        <div className="flex items-center justify-between mb-6">
+          <div className={`w-14 h-14 ${colorClasses[color]} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:shadow-xl transition-shadow duration-200`}>
             {icon}
           </div>
           {trend && (
-            <div className={`flex items-center text-sm ${
-              trendDirection === 'up' ? 'text-green-600' : 'text-red-600'
+            <div className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${
+              trendDirection === 'up'
+                ? 'text-green-700 bg-green-100 dark:text-green-400 dark:bg-green-900/30'
+                : 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-900/30'
             }`}>
-              <svg className={`w-4 h-4 mr-1 ${trendDirection === 'down' ? 'rotate-180' : ''}`}
+              <svg className={`w-3 h-3 mr-1 ${trendDirection === 'down' ? 'rotate-180' : ''}`}
                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
@@ -138,11 +148,15 @@ const CRMMetrics: React.FC = () => {
             </div>
           )}
         </div>
-        <div className="space-y-2">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {isLoading ? '...' : value}
+        <div className="space-y-1">
+          <h3 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+            {isLoading ? (
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            ) : (
+              value
+            )}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
         </div>
       </div>
     );

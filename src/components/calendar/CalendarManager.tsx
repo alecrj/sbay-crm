@@ -191,17 +191,107 @@ const CalendarManager: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Calendar & Appointments
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Manage appointments and sync with Google Calendar
-        </p>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-8">
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Calendar & Appointments
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Manage your appointments and schedule meetings
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              Confirmed
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+              Pending
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              Cancelled
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="calendar-container">
+      <div className="calendar-container bg-gray-50 dark:bg-gray-900/30 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+        <style jsx global>{`
+          .fc-toolbar {
+            margin-bottom: 1.5rem !important;
+          }
+          .fc-toolbar-title {
+            font-size: 1.5rem !important;
+            font-weight: 700 !important;
+            color: rgb(17 24 39) !important;
+          }
+          .dark .fc-toolbar-title {
+            color: rgb(255 255 255) !important;
+          }
+          .fc-button {
+            background: rgb(59 130 246) !important;
+            border: none !important;
+            border-radius: 0.5rem !important;
+            padding: 0.5rem 1rem !important;
+            font-weight: 500 !important;
+            transition: all 0.2s ease !important;
+          }
+          .fc-button:hover {
+            background: rgb(37 99 235) !important;
+            transform: translateY(-1px) !important;
+          }
+          .fc-button:focus {
+            box-shadow: 0 0 0 3px rgb(59 130 246 / 0.3) !important;
+          }
+          .fc-today-button {
+            background: rgb(16 185 129) !important;
+          }
+          .fc-today-button:hover {
+            background: rgb(5 150 105) !important;
+          }
+          .fc-daygrid-day.fc-day-today {
+            background: rgb(239 246 255) !important;
+          }
+          .dark .fc-daygrid-day.fc-day-today {
+            background: rgb(30 58 138 / 0.2) !important;
+          }
+          .fc-event {
+            border-radius: 0.5rem !important;
+            border: none !important;
+            padding: 0.25rem 0.5rem !important;
+            font-weight: 500 !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+            transition: all 0.2s ease !important;
+          }
+          .fc-event:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+          }
+          .fc-daygrid-event-dot {
+            display: none !important;
+          }
+          .fc-h-event {
+            border-radius: 0.5rem !important;
+          }
+          .fc-col-header-cell {
+            background: rgb(249 250 251) !important;
+            border: 1px solid rgb(229 231 235) !important;
+            font-weight: 600 !important;
+          }
+          .dark .fc-col-header-cell {
+            background: rgb(17 24 39) !important;
+            border: 1px solid rgb(55 65 81) !important;
+            color: rgb(255 255 255) !important;
+          }
+          .fc-scrollgrid {
+            border-radius: 0.75rem !important;
+            overflow: hidden !important;
+          }
+        `}</style>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
           headerToolbar={{
@@ -227,7 +317,7 @@ const CalendarManager: React.FC = () => {
           slotMinTime="08:00:00"
           slotMaxTime="19:00:00"
           businessHours={{
-            daysOfWeek: [1, 2, 3, 4, 5], // Monday - Friday
+            daysOfWeek: [1, 2, 3, 4, 5],
             startTime: '09:00',
             endTime: '17:00',
           }}
