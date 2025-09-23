@@ -479,36 +479,36 @@ export default function PropertiesPage() {
                         />
                       </div>
                     </div>
-                  </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Size *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.size}
-                        onChange={(e) => setFormData({...formData, size: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="10,000 SF"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Price *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.price}
-                        onChange={(e) => setFormData({...formData, price: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="$8.50/SF/Year"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Size *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.size}
+                          onChange={(e) => setFormData({...formData, size: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="10,000 SF"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Price *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.price}
+                          onChange={(e) => setFormData({...formData, price: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="$8.50/SF/Year"
+                        />
+                      </div>
                     </div>
+
                     <div className="col-span-full">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Property Image
