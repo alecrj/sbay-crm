@@ -47,7 +47,7 @@ export default function InvitationsPage() {
       const { data, error } = await supabase
         .from('invited_users')
         .select('*')
-        .order('invited_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setInvitations(data || []);
@@ -365,7 +365,7 @@ export default function InvitationsPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {formatDate(invitation.invited_at)}
+                        {formatDate(invitation.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {formatDate(invitation.expires_at)}
