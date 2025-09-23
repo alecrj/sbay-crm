@@ -26,12 +26,32 @@ function AuthCallbackContent() {
         }
 
         if (data.session) {
-          // Check if this is a password reset
+          // Check the type of auth callback
           const type = searchParams.get('type');
+          const token = searchParams.get('token');
 
           if (type === 'recovery') {
             // Redirect to password reset form
             router.push('/login?action=reset_password');
+          } else if (type === 'invite' && token) {
+            // Handle invitation acceptance
+            try {
+              // Update invitation status to accepted
+              const { error: updateError } = await supabase
+                .from('invited_users')
+                .update({ status: 'accepted' })
+                .eq('invitation_token', token);
+
+              if (updateError) {
+                console.error('Error updating invitation status:', updateError);
+              }
+
+              // Redirect to dashboard with welcome message
+              router.replace('/?invited=true');
+            } catch (error) {
+              console.error('Error processing invitation:', error);
+              router.replace('/');
+            }
           } else {
             // Regular login, redirect to dashboard
             router.replace('/');

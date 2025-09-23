@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '../../../../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Create admin client for sending invitations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,59 +24,91 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists as invitation
-    const { data: existing } = await supabase
-      .from('invited_users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    // Check if user already exists
+    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email);
 
-    if (existing) {
+    if (existingUser.user) {
       return NextResponse.json(
-        { error: 'This email is already invited' },
+        { error: 'A user with this email already exists' },
         { status: 400 }
       );
     }
 
+    // Check if email already has pending invitation
+    const { data: existing } = await supabaseAdmin
+      .from('invited_users')
+      .select('*')
+      .eq('email', email)
+      .eq('status', 'pending')
+      .single();
+
+    if (existing) {
+      return NextResponse.json(
+        { error: 'This email already has a pending invitation' },
+        { status: 400 }
+      );
+    }
+
+    // Generate secure invitation token
+    const invitationToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
     // Create invitation record
-    const { data: invitation, error } = await supabase
+    const { data: invitation, error: dbError } = await supabaseAdmin
       .from('invited_users')
       .insert([{
         email,
         role,
         invited_by: invitedBy,
         status: 'pending',
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+        invitation_token: invitationToken,
+        expires_at: expiresAt.toISOString()
       }])
       .select()
       .single();
 
-    if (error) {
-      throw error;
+    if (dbError) {
+      throw dbError;
     }
 
-    // TODO: Add email sending functionality here
-    // For now, we'll just return success and provide manual instructions
+    // Send invitation email using Supabase Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      email,
+      {
+        data: {
+          role: role,
+          invited_by: invitedBy,
+          invitation_token: invitationToken
+        },
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=invite&token=${invitationToken}`
+      }
+    );
+
+    if (authError) {
+      // If email sending fails, clean up the invitation record
+      await supabaseAdmin
+        .from('invited_users')
+        .delete()
+        .eq('id', invitation.id);
+
+      throw authError;
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Invitation created for ${email}. Share the signup link with them.`,
-      invitation,
-      instructions: {
-        signupUrl: process.env.NEXT_PUBLIC_SITE_URL + '/login',
-        steps: [
-          'Share the signup URL with the invited user',
-          'They should click "Need to set up account?" on the login page',
-          'They enter their email and create a password',
-          'Their account will be automatically approved based on the invitation'
-        ]
+      message: `Invitation email sent to ${email}`,
+      invitation: {
+        email,
+        role,
+        status: 'pending',
+        expires_at: expiresAt.toISOString()
       }
     });
 
   } catch (error) {
-    console.error('Error creating invitation:', error);
+    console.error('Error sending invitation:', error);
     return NextResponse.json(
-      { error: 'Failed to create invitation' },
+      { error: error instanceof Error ? error.message : 'Failed to send invitation' },
       { status: 500 }
     );
   }

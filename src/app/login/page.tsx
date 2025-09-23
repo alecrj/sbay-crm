@@ -302,12 +302,9 @@ export default function LoginPage() {
 
           {!isSignUp && (
             <div className="flex items-center justify-between text-sm">
-              <button
-                onClick={() => setIsSignUp(true)}
-                className="text-blue-300 hover:text-blue-200 transition-colors"
-              >
-                Need to set up account?
-              </button>
+              <div className="text-blue-300/70 text-xs">
+                Invitation-only access
+              </div>
               <button
                 onClick={handleForgotPassword}
                 disabled={loading}

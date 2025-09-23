@@ -249,36 +249,24 @@ export default function InvitationsPage() {
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-blue-900 mb-2">Next Steps:</h3>
-                <div className="text-sm text-blue-800 space-y-2">
-                  <p><strong>1.</strong> Share the signup link below with {lastInvitedEmail}</p>
-                  <p><strong>2.</strong> They click "Need to set up account?" on the login page</p>
-                  <p><strong>3.</strong> They enter their email and create a password</p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-green-900 mb-2">✅ Invitation Email Sent!</h3>
+                <div className="text-sm text-green-800 space-y-2">
+                  <p><strong>What happens next:</strong></p>
+                  <p>• {lastInvitedEmail} will receive a secure invitation email</p>
+                  <p>• They click the magic link to automatically create their account</p>
+                  <p>• Their account is created and they're immediately logged in</p>
+                  <p>• No passwords needed - completely secure and automatic</p>
                 </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Signup Link (Copy & Share)
-                </label>
-                <div className="flex">
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${window.location.origin}/login`}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50 text-sm"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/login`);
-                      setMessage('✅ Link copied to clipboard!');
-                      setTimeout(() => setMessage(''), 3000);
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700 text-sm"
-                  >
-                    Copy
-                  </button>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <h4 className="font-medium text-gray-900 mb-2">Security Features:</h4>
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p>• Invitation expires in 7 days</p>
+                  <p>• One-time use secure token</p>
+                  <p>• Only invited emails can create accounts</p>
+                  <p>• Role automatically assigned ({lastInvitedEmail ? 'Admin' : 'User'})</p>
                 </div>
               </div>
 
@@ -293,13 +281,13 @@ export default function InvitationsPage() {
         )}
 
         {/* Instructions */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h3 className="font-medium text-blue-900 mb-2">How User Invitations Work</h3>
-          <div className="text-sm text-blue-800 space-y-2">
-            <p><strong>1. Invite users</strong> by adding their email addresses and assigning roles</p>
-            <p><strong>2. Share the signup URL:</strong> <code className="bg-blue-100 px-2 py-1 rounded">https://sbaycrm.netlify.app/login</code></p>
-            <p><strong>3. They click "Need to set up account?"</strong> and enter their email</p>
-            <p><strong>4. Create password and sign in</strong> - secure email/password authentication</p>
+        <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+          <h3 className="font-medium text-green-900 mb-2">✅ Secure Email Invitation System</h3>
+          <div className="text-sm text-green-800 space-y-2">
+            <p><strong>1. Send invitations</strong> - Enter email and select role, system automatically sends invitation email</p>
+            <p><strong>2. Secure magic link</strong> - Invited user receives email with secure invitation link</p>
+            <p><strong>3. One-click setup</strong> - They click the link to automatically create their account</p>
+            <p><strong>4. Immediate access</strong> - Account is created and they're logged in to the CRM</p>
           </div>
         </div>
 
