@@ -25,10 +25,17 @@ export default function LoginPage() {
       const accessToken = searchParams.get('access_token');
       const refreshToken = searchParams.get('refresh_token');
 
-      // Handle password reset/invitation flows
-      if (type === 'recovery' || (accessToken && refreshToken)) {
+      // Handle invitation flows
+      if (type === 'invite' || type === 'signup' || (accessToken && refreshToken)) {
         setIsPasswordSetup(true);
-        setMessage('Please set your password to continue.');
+        setMessage('Welcome! Please set your password to complete your account setup.');
+        return;
+      }
+
+      // Handle password reset flows
+      if (type === 'recovery') {
+        setIsPasswordSetup(true);
+        setMessage('Please enter your new password.');
         return;
       }
 

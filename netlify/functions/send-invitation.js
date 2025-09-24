@@ -81,9 +81,13 @@ exports.handler = async (event, context) => {
 
     console.log('Invitation stored successfully:', insertData);
 
-    // Send invitation email using Supabase auth
-    const { error: emailError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`
+    // Send invitation email using Supabase's proper invitation system
+    const { data: inviteData, error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`,
+      data: {
+        role: role,
+        invited_by: invitedBy
+      }
     });
 
     if (emailError) {
