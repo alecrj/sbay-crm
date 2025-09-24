@@ -14,14 +14,31 @@ function createSupabaseAdmin() {
     auth: {
       autoRefreshToken: false,
       persistSession: false
-    }
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+      },
+    },
   });
 }
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Environment variables check:', {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      urlValue: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      // Don't log the actual key for security
+    });
+
     // Initialize Supabase admin client
     const supabaseAdmin = createSupabaseAdmin();
+    console.log('Supabase admin client created:', {
+      hasAuth: !!supabaseAdmin.auth,
+      hasAdmin: !!supabaseAdmin.auth?.admin,
+      hasGetUserByEmail: !!supabaseAdmin.auth?.admin?.getUserByEmail
+    });
 
     const { email, role, invitedBy } = await request.json();
 
