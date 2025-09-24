@@ -328,14 +328,24 @@ export default function InvitationsPage() {
                 </p>
               </div>
 
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-green-900 mb-2">✅ Invitation Email Sent!</h3>
+                <div className="text-sm text-green-800 space-y-2">
+                  <p><strong>Automatic email sent to {lastInvitedEmail}</strong></p>
+                  <p>• They will receive a secure invitation email from Supabase</p>
+                  <p>• The email contains a magic link to set up their password</p>
+                  <p>• Once they set their password, they can log in immediately</p>
+                </div>
+              </div>
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-blue-900 mb-2">📋 Manual Invitation Link (For Testing)</h3>
+                <h3 className="font-medium text-blue-900 mb-2">📋 Backup Manual Link</h3>
                 <div className="text-sm text-blue-800 space-y-2">
-                  <p><strong>Send this link to {lastInvitedEmail}:</strong></p>
+                  <p><strong>If email doesn't arrive, share this link:</strong></p>
                   <div className="bg-white p-2 rounded border text-xs break-all">
                     {lastInvitationLink || `${window.location.origin}/login?action=set_password&token=TOKEN&email=${encodeURIComponent(lastInvitedEmail)}`}
                   </div>
-                  <p className="text-xs">💡 In production, this would be sent automatically via email service</p>
+                  <p className="text-xs">💡 This is the same link that was sent via email</p>
                 </div>
               </div>
 

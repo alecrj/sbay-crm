@@ -118,18 +118,61 @@ exports.handler = async (event, context) => {
     console.log('Site URL from env:', process.env.NEXT_PUBLIC_SITE_URL);
     console.log('Using site URL:', siteUrl);
 
-    // For now, we'll just create the invitation record and provide the link
-    // In production, you would integrate with an email service like SendGrid, Mailgun, etc.
-    console.log('=== INVITATION CREATED ===');
-    console.log('Invitation link generated:', invitationLink);
-    console.log('Next step: Send this link to the user via your preferred email service');
+    // Send invitation email using Supabase Auth
+    console.log('=== SENDING INVITATION EMAIL ===');
+    console.log('Attempting to send invitation email to:', email);
+    console.log('Redirect URL:', invitationLink);
 
     let emailSent = false;
     let emailError = null;
 
-    // Since we're not sending actual emails yet, we'll mark as "sent" for testing
-    // In production, replace this with your email service integration
-    emailSent = true;
+    try {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        email,
+        {
+          data: {
+            role: role,
+            invited_by: invitedBy,
+            invitation_token: invitationToken
+          },
+          redirectTo: invitationLink
+        }
+      );
+
+      console.log('=== EMAIL RESPONSE ===');
+      console.log('Auth data:', JSON.stringify(authData, null, 2));
+      console.log('Auth error:', JSON.stringify(authError, null, 2));
+
+      if (authError) {
+        emailError = authError;
+        console.error('❌ Email sending failed:', authError);
+        console.error('Error details:', {
+          message: authError.message,
+          status: authError.status,
+          statusText: authError.statusText
+        });
+        // Don't fail the whole process if email fails
+        emailSent = false;
+      } else {
+        emailSent = true;
+        console.log('✅ Invitation email sent successfully!');
+        console.log('Email data:', authData);
+      }
+    } catch (emailException) {
+      emailError = emailException;
+      console.error('❌ Email sending exception:', emailException);
+      console.error('Exception details:', {
+        name: emailException.name,
+        message: emailException.message,
+        stack: emailException.stack
+      });
+      // Don't fail the whole process if email fails
+      emailSent = false;
+    }
+
+    console.log('=== EMAIL SUMMARY ===');
+    console.log('Email sent:', emailSent);
+    console.log('Email error:', emailError ? emailError.message : 'None');
 
     console.log('Invitation created successfully:', {
       email,

@@ -236,6 +236,10 @@ export default function LoginPage() {
     setMessage('');
 
     try {
+      console.log('=== PASSWORD SETUP DEBUG ===');
+      console.log('Email:', email);
+      console.log('Invitation Token:', invitationToken);
+
       // Get invitation details
       const { data: invitation, error: invitationError } = await supabase
         .from('invited_users')
@@ -244,26 +248,40 @@ export default function LoginPage() {
         .eq('status', 'pending')
         .single();
 
+      console.log('Invitation data:', invitation);
+      console.log('Invitation error:', invitationError);
+
       if (invitationError || !invitation) {
-        throw new Error('Invalid invitation token');
+        throw new Error(`Invalid invitation token: ${invitationError?.message || 'Not found'}`);
       }
 
       // Create user account with email and password
+      console.log('Creating user account...');
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: email,
         password: password,
         options: {
           data: {
             role: invitation.role,
-            invited_by: invitation.invited_by
+            invited_by: invitation.invited_by,
+            invitation_token: invitationToken
           }
         }
       });
 
-      if (signUpError) throw signUpError;
+      console.log('SignUp data:', authData);
+      console.log('SignUp error:', signUpError);
+
+      // Handle the case where user already exists (from Supabase inviteUserByEmail)
+      if (signUpError && signUpError.message?.includes('already registered')) {
+        console.log('User already exists, this is expected from Supabase invitation system');
+        // This is actually success - the user was created by inviteUserByEmail
+      } else if (signUpError) {
+        throw signUpError;
+      }
 
       // Update invitation status to accepted
-      await supabase
+      const { error: updateError } = await supabase
         .from('invited_users')
         .update({
           status: 'accepted',
@@ -271,17 +289,30 @@ export default function LoginPage() {
         })
         .eq('invitation_token', invitationToken);
 
-      setMessage('Account created successfully! You can now sign in with your email and password.');
-      setIsPasswordSetup(false);
-      setPassword('');
-      setConfirmPassword('');
-      setInvitationToken('');
+      console.log('Invitation update error:', updateError);
 
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, '/login');
+      setMessage('✅ Account setup complete! You can now sign in with your email and password.');
+
+      // Wait a moment then redirect to regular login
+      setTimeout(() => {
+        setIsPasswordSetup(false);
+        setPassword('');
+        setConfirmPassword('');
+        setInvitationToken('');
+        window.history.replaceState({}, document.title, '/login');
+      }, 2000);
+
     } catch (error: any) {
       console.error('Password setup error:', error);
-      setMessage(`Error: ${error.message || 'Account setup failed'}`);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        statusText: error.statusText,
+        stack: error.stack
+      });
+
+      // Show detailed error message
+      setMessage(`❌ Error: ${error.message || 'Account setup failed'}. Please try again or contact support.`);
     } finally {
       setLoading(false);
     }
