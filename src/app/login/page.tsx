@@ -138,6 +138,22 @@ export default function LoginPage() {
       // Password updated successfully - user will be automatically signed in
       setMessage('Password updated successfully! Redirecting...');
 
+      // Update invitation status to accepted
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          await supabase
+            .from('invited_users')
+            .update({
+              status: 'accepted',
+              accepted_at: new Date().toISOString()
+            })
+            .eq('email', user.email);
+        }
+      } catch (err) {
+        console.error('Error updating invitation status:', err);
+      }
+
       // Small delay then redirect to dashboard
       setTimeout(() => {
         window.location.href = '/';
@@ -180,6 +196,22 @@ export default function LoginPage() {
 
       // Password set successfully - user will be automatically signed in
       setMessage('Account setup complete! Redirecting...');
+
+      // Update invitation status to accepted
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.email) {
+          await supabase
+            .from('invited_users')
+            .update({
+              status: 'accepted',
+              accepted_at: new Date().toISOString()
+            })
+            .eq('email', user.email);
+        }
+      } catch (err) {
+        console.error('Error updating invitation status:', err);
+      }
 
       // Small delay then redirect to dashboard
       setTimeout(() => {
