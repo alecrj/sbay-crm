@@ -66,7 +66,10 @@ exports.handler = async (event, context) => {
 
     const { data: insertData, error: dbError } = await supabaseAdmin
       .from('invited_users')
-      .upsert(inviteData);
+      .upsert(inviteData, {
+        onConflict: 'email',
+        ignoreDuplicates: false
+      });
 
     if (dbError) {
       console.error('Database error details:', {
