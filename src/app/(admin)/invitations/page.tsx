@@ -232,7 +232,7 @@ export default function InvitationsPage() {
                 User Invitations
               </h1>
               <p className="text-gray-600">
-                Manage who can access your CRM system with email/password authentication
+                Manage who can access your system
               </p>
             </div>
             <button
@@ -326,38 +326,7 @@ export default function InvitationsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Invitation Created!</h2>
-                <p className="text-gray-600">
-                  <strong>{lastInvitedEmail}</strong> has been invited to join your CRM.
-                </p>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-green-900 mb-2">✅ User Account Created!</h3>
-                <div className="text-sm text-green-800 space-y-2">
-                  <p><strong>Account created for {lastInvitedEmail}</strong></p>
-                  <p>• User can login immediately with the temporary password below</p>
-                  <p>• They'll be prompted to set a permanent password on first login</p>
-                  <p>• Simple, secure, and professional - just like HighLevel CRM!</p>
-                </div>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-green-900 mb-2">✅ Invitation Sent Successfully</h3>
-                <div className="text-sm text-green-800">
-                  <p><strong>{lastInvitedEmail}</strong> has been sent an email invitation with a link to set up their password.</p>
-                  <p className="mt-2 text-xs">They'll receive the email within a few minutes and can click the link to create their account.</p>
-                </div>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-green-900 mb-2">✅ What happens next:</h3>
-                <div className="text-sm text-green-800 space-y-2">
-                  <p>• User clicks the invitation link</p>
-                  <p>• They create a password for their account</p>
-                  <p>• Account is automatically created and they can log in</p>
-                  <p>• Role is automatically assigned based on invitation</p>
-                </div>
+                <h2 className="text-xl font-bold text-gray-900">Invitation sent to {lastInvitedEmail}</h2>
               </div>
 
               <button
@@ -377,7 +346,7 @@ export default function InvitationsPage() {
             <p><strong>1. Send invitations</strong> - Enter email and select role, system automatically sends invitation email</p>
             <p><strong>2. Secure magic link</strong> - Invited user receives email with secure invitation link</p>
             <p><strong>3. One-click setup</strong> - They click the link to automatically create their account</p>
-            <p><strong>4. Immediate access</strong> - Account is created and they're logged in to the CRM</p>
+            <p><strong>4. Immediate access</strong> - Account is created and they're logged in</p>
           </div>
         </div>
 
@@ -396,7 +365,7 @@ export default function InvitationsPage() {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">No invitations yet</h3>
               <p className="text-gray-600 mb-6">
-                Invite your team and clients to create accounts and access the CRM system.
+                Invite your team and clients to create accounts.
               </p>
               <button
                 onClick={() => setShowForm(true)}
