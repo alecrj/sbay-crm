@@ -110,16 +110,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error sending invitation:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error constructor:', error?.constructor?.name);
+    console.error('Error stringified:', JSON.stringify(error));
     console.error('Error details:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined
+      name: error instanceof Error ? error.name : undefined,
+      toString: error?.toString?.()
     });
 
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Failed to send invitation',
-        details: error instanceof Error ? error.stack : 'Unknown error type'
+        error: error instanceof Error ? error.message : `Failed to send invitation: ${String(error)}`,
+        details: error instanceof Error ? error.stack : `Error type: ${typeof error}, Constructor: ${error?.constructor?.name}, String: ${String(error)}`,
+        rawError: String(error)
       },
       { status: 500 }
     );
