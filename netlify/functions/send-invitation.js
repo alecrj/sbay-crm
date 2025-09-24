@@ -47,8 +47,9 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Generate invitation token
-    const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    // Generate UUID for invitation token
+    const { randomUUID } = require('crypto');
+    const invitationToken = randomUUID();
 
     // Store invitation in database first
     const inviteData = {
