@@ -50,21 +50,53 @@ exports.handler = async (event, context) => {
 
     console.log('Sending invitation to:', email, 'with role:', role);
 
-    // Use standard Supabase invitation flow
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`,
-      data: {
-        role: role,
-        invited_by: invitedBy
-      }
-    });
+    // Check if user already exists in auth system
+    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = listError ? null : authUsers.users.find(user => user.email === email);
 
-    if (error) {
-      console.error('Invitation error:', error);
-      throw error;
+    if (existingUser) {
+      console.log('User already exists, sending password reset instead');
+
+      // Send password reset email for existing users
+      const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'recovery',
+        email: email,
+        options: {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`
+        }
+      });
+
+      if (resetError) {
+        throw resetError;
+      }
+
+      // Update their role in user metadata
+      await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+        user_metadata: {
+          ...existingUser.user_metadata,
+          role: role,
+          invited_by: invitedBy
+        }
+      });
+    } else {
+      console.log('New user, sending invitation');
+
+      // Use standard Supabase invitation flow for new users
+      const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`,
+        data: {
+          role: role,
+          invited_by: invitedBy
+        }
+      });
+
+      if (error) {
+        console.error('Invitation error:', error);
+        throw error;
+      }
     }
 
-    // Store invitation details in database for admin tracking
+    // Store/update invitation details in database for admin tracking
     await supabaseAdmin
       .from('invited_users')
       .upsert({
@@ -75,15 +107,16 @@ exports.handler = async (event, context) => {
         invited_at: new Date().toISOString()
       });
 
-    console.log('✅ Invitation sent successfully to:', email);
+    console.log('✅ Invitation/reset sent successfully to:', email);
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        message: `Invitation sent to ${email}`,
-        user: data.user
+        message: existingUser ?
+          `Password reset sent to ${email} (existing user)` :
+          `Invitation sent to ${email} (new user)`
       })
     };
 

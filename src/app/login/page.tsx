@@ -18,12 +18,7 @@ export default function LoginPage() {
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
 
   useEffect(() => {
-    // Redirect if already logged in
-    if (user) {
-      router.push('/');
-    }
-
-    // Check URL parameters for password setup flows
+    // Check URL parameters for password setup flows FIRST
     if (searchParams) {
       const error = searchParams.get('error');
       const type = searchParams.get('type');
@@ -32,6 +27,7 @@ export default function LoginPage() {
       if (type === 'recovery' || type === 'invite') {
         setIsPasswordSetup(true);
         setMessage('Please set your password to continue.');
+        return; // Don't redirect if this is a password setup flow
       }
 
       // Handle expired links
@@ -42,9 +38,15 @@ export default function LoginPage() {
         } else {
           setMessage('There was an issue with authentication. Please try again.');
         }
+        return; // Don't redirect if there's an error to show
       }
     }
-  }, [user, router, searchParams]);
+
+    // Only redirect if already logged in AND not in a password setup flow
+    if (user && !isPasswordSetup) {
+      router.push('/');
+    }
+  }, [user, router, searchParams, isPasswordSetup]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
