@@ -108,7 +108,17 @@ exports.handler = async (event, context) => {
     const invitationLink = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=invite&token=${invitationToken}`;
 
     // Send invitation email using Supabase Auth
-    console.log('Attempting to send invitation email...');
+    console.log('=== EMAIL SENDING DEBUG ===');
+    console.log('Attempting to send invitation email to:', email);
+    console.log('Redirect URL:', invitationLink);
+    console.log('Admin client available:', !!supabaseAdmin);
+    console.log('Admin auth available:', !!supabaseAdmin.auth);
+    console.log('Admin.admin available:', !!supabaseAdmin.auth.admin);
+    console.log('inviteUserByEmail available:', typeof supabaseAdmin.auth.admin.inviteUserByEmail);
+
+    let emailSent = false;
+    let emailError = null;
+
     try {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         email,
@@ -122,17 +132,36 @@ exports.handler = async (event, context) => {
         }
       );
 
+      console.log('=== EMAIL RESPONSE ===');
+      console.log('Auth data:', JSON.stringify(authData, null, 2));
+      console.log('Auth error:', JSON.stringify(authError, null, 2));
+
       if (authError) {
-        console.error('Email sending error:', authError);
-        // Don't fail the whole process, but log the error
-        console.log('Invitation created but email failed to send:', authError.message);
+        emailError = authError;
+        console.error('❌ Email sending failed:', authError);
+        console.error('Error details:', {
+          message: authError.message,
+          status: authError.status,
+          statusText: authError.statusText
+        });
       } else {
-        console.log('Invitation email sent successfully:', authData);
+        emailSent = true;
+        console.log('✅ Invitation email sent successfully!');
+        console.log('Email data:', authData);
       }
-    } catch (emailError) {
-      console.error('Email sending exception:', emailError);
-      // Don't fail the whole process, continue with success
+    } catch (emailException) {
+      emailError = emailException;
+      console.error('❌ Email sending exception:', emailException);
+      console.error('Exception details:', {
+        name: emailException.name,
+        message: emailException.message,
+        stack: emailException.stack
+      });
     }
+
+    console.log('=== EMAIL SUMMARY ===');
+    console.log('Email sent:', emailSent);
+    console.log('Email error:', emailError ? emailError.message : 'None');
 
     console.log('Invitation created successfully:', {
       email,
@@ -146,6 +175,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: true,
         message: `Invitation created for ${email}`,
+        emailSent: emailSent,
+        emailError: emailError ? emailError.message : null,
         invitation: {
           email,
           role,
