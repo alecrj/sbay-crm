@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [invitationToken, setInvitationToken] = useState('');
+  const [isPasswordSetup, setIsPasswordSetup] = useState(false);
   const { user, signIn, signUp, resetPassword } = useAuth();
   const router = useRouter();
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -32,6 +34,15 @@ export default function LoginPage() {
       if (action === 'reset_password') {
         setIsPasswordReset(true);
         setMessage('You can now set a new password for your account.');
+      }
+
+      if (action === 'set_password') {
+        const token = searchParams.get('token');
+        if (token) {
+          setInvitationToken(token);
+          setIsPasswordSetup(true);
+          setMessage('Welcome! Please set up your password to complete account creation.');
+        }
       }
 
       if (error) {
@@ -194,6 +205,59 @@ export default function LoginPage() {
     }
   };
 
+  const handlePasswordSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!password.trim() || !confirmPassword.trim()) {
+      setMessage('Please enter and confirm your password');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setMessage('Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      setMessage('Password must be at least 6 characters');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      // Update the user's password
+      const { error } = await supabase.auth.updateUser({
+        password: password
+      });
+
+      if (error) throw error;
+
+      // Update invitation status to accepted
+      if (invitationToken) {
+        await supabase
+          .from('invited_users')
+          .update({ status: 'accepted' })
+          .eq('invitation_token', invitationToken);
+      }
+
+      setMessage('Account setup complete! You can now sign in with your new password.');
+      setIsPasswordSetup(false);
+      setPassword('');
+      setConfirmPassword('');
+      setInvitationToken('');
+
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, '/login');
+    } catch (error: any) {
+      console.error('Password setup error:', error);
+      setMessage(`Error: ${error.message || 'Account setup failed'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 py-12 px-4">
       <div className="max-w-md w-full space-y-8">
@@ -206,31 +270,35 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-white">
-            {isPasswordReset ? 'Set New Password' : isSignUp ? 'Complete Setup' : 'Welcome Back'}
+            {isPasswordSetup ? 'Set Up Your Password' : isPasswordReset ? 'Set New Password' : isSignUp ? 'Complete Setup' : 'Welcome Back'}
           </h2>
           <p className="mt-2 text-blue-200">
-            {isPasswordReset
-              ? 'Enter your new password below'
-              : isSignUp
-                ? 'Create your password to access your account'
-                : 'Sign in to your CRM dashboard'
+            {isPasswordSetup
+              ? 'Create your password to complete account setup'
+              : isPasswordReset
+                ? 'Enter your new password below'
+                : isSignUp
+                  ? 'Create your password to access your account'
+                  : 'Sign in to your CRM dashboard'
             }
           </p>
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl border border-white/20 shadow-xl space-y-6">
-          <form onSubmit={isPasswordReset ? handlePasswordReset : isSignUp ? handleSignUp : handleLogin} className="space-y-6">
+          <form onSubmit={isPasswordSetup ? handlePasswordSetup : isPasswordReset ? handlePasswordReset : isSignUp ? handleSignUp : handleLogin} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-white mb-2">
                 Email Address
               </label>
               <input
                 type="email"
-                required
+                required={!isPasswordSetup}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="your@email.com"
+                disabled={isPasswordSetup}
+                style={isPasswordSetup ? { opacity: 0.6 } : {}}
               />
             </div>
 
@@ -267,7 +335,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {isSignUp && (
+            {(isSignUp || isPasswordSetup || isPasswordReset) && (
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Confirm Password
@@ -292,15 +360,15 @@ export default function LoginPage() {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
+                  {isPasswordSetup ? 'Setting Up Account...' : isSignUp ? 'Creating Account...' : 'Signing In...'}
                 </div>
               ) : (
-                isSignUp ? 'Create Account' : 'Sign In'
+                isPasswordSetup ? 'Complete Setup' : isSignUp ? 'Create Account' : 'Sign In'
               )}
             </button>
           </form>
 
-          {!isSignUp && (
+          {!isSignUp && !isPasswordSetup && !isPasswordReset && (
             <div className="flex items-center justify-between text-sm">
               <div className="text-blue-300/70 text-xs">
                 Invitation-only access

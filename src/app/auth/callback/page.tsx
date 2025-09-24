@@ -34,23 +34,14 @@ function AuthCallbackContent() {
             // Redirect to password reset form
             router.push('/login?action=reset_password');
           } else if (type === 'invite' && token) {
-            // Handle invitation acceptance
+            // Handle invitation acceptance - redirect to password setup
             try {
-              // Update invitation status to accepted
-              const { error: updateError } = await supabase
-                .from('invited_users')
-                .update({ status: 'accepted' })
-                .eq('invitation_token', token);
-
-              if (updateError) {
-                console.error('Error updating invitation status:', updateError);
-              }
-
-              // Redirect to dashboard with welcome message
-              router.replace('/?invited=true');
+              // Don't update invitation status yet - do it after password setup
+              // Just redirect to login with invitation info
+              router.replace(`/login?action=set_password&token=${token}`);
             } catch (error) {
               console.error('Error processing invitation:', error);
-              router.replace('/');
+              router.replace('/login?error=invitation_failed');
             }
           } else {
             // Regular login, redirect to dashboard
