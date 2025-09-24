@@ -58,7 +58,7 @@ exports.handler = async (event, context) => {
       console.log('User already exists, sending password reset instead');
 
       // Send password reset email for existing users
-      const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+      const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'recovery',
         email: email,
         options: {
@@ -67,7 +67,10 @@ exports.handler = async (event, context) => {
       });
 
       if (resetError) {
+        console.error('❌ Password reset generation failed:', resetError);
         throw resetError;
+      } else {
+        console.log('✅ Password reset link generated:', resetData?.properties?.action_link || 'no link returned');
       }
 
       // Update their role in user metadata
@@ -91,13 +94,15 @@ exports.handler = async (event, context) => {
       });
 
       if (error) {
-        console.error('Invitation error:', error);
+        console.error('❌ Invitation error:', error);
         throw error;
+      } else {
+        console.log('✅ New user invitation sent:', data?.user?.id || 'no user data returned');
       }
     }
 
     // Store/update invitation details in database for admin tracking
-    await supabaseAdmin
+    const { error: dbError } = await supabaseAdmin
       .from('invited_users')
       .upsert({
         email,
@@ -106,6 +111,12 @@ exports.handler = async (event, context) => {
         status: 'pending',
         invited_at: new Date().toISOString()
       });
+
+    if (dbError) {
+      console.error('Database error storing invitation:', dbError);
+    } else {
+      console.log('✅ Invitation stored in database');
+    }
 
     console.log('✅ Invitation/reset sent successfully to:', email);
 
