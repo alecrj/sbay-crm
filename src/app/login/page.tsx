@@ -25,12 +25,11 @@ export default function LoginPage() {
       const accessToken = searchParams.get('access_token');
       const refreshToken = searchParams.get('refresh_token');
 
-      // Handle both invitation and password reset flows
-      if (type === 'recovery' || type === 'invite' || (accessToken && refreshToken)) {
-        console.log('Password setup flow detected, type:', type, 'hasTokens:', !!(accessToken && refreshToken));
+      // Handle password reset/invitation flows
+      if (type === 'recovery' || (accessToken && refreshToken)) {
         setIsPasswordSetup(true);
         setMessage('Please set your password to continue.');
-        return; // Don't redirect if this is a password setup flow
+        return;
       }
 
       // Handle expired links
@@ -39,15 +38,14 @@ export default function LoginPage() {
         if (error === 'access_denied' && errorDescription?.includes('expired')) {
           setMessage('Link has expired. Please request a new invitation or use "Forgot Password".');
         } else {
-          setMessage('There was an issue with authentication. Please try again.');
+          setMessage('Authentication error. Please try again.');
         }
-        return; // Don't redirect if there's an error to show
+        return;
       }
     }
 
-    // Only redirect if already logged in AND not in a password setup flow
+    // Redirect if already logged in and not setting up password
     if (user && !isPasswordSetup) {
-      console.log('Redirecting logged in user to dashboard');
       router.push('/');
     }
   }, [user, router, searchParams, isPasswordSetup]);
