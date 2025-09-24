@@ -15,7 +15,48 @@ function AuthCallbackContent() {
       try {
         setIsLoading(true);
 
-        // Handle the auth callback from Supabase
+        // Check if this is an invitation callback first
+        const type = searchParams.get('type');
+        const token = searchParams.get('token');
+
+        if (type === 'invite' && token) {
+          // For invitations, we don't need a session yet
+          // Validate the invitation token and redirect to password setup
+          try {
+            const { data: invitation, error: invitationError } = await supabase
+              .from('invited_users')
+              .select('*')
+              .eq('invitation_token', token)
+              .eq('status', 'pending')
+              .single();
+
+            if (invitationError || !invitation) {
+              console.error('Invalid invitation token:', invitationError);
+              setError('Invalid or expired invitation link.');
+              setTimeout(() => router.push('/login?error=invalid_invitation'), 2000);
+              return;
+            }
+
+            // Check if invitation is expired
+            if (new Date() > new Date(invitation.expires_at)) {
+              console.error('Invitation expired');
+              setError('This invitation has expired.');
+              setTimeout(() => router.push('/login?error=expired_invitation'), 2000);
+              return;
+            }
+
+            // Redirect to password setup with the user's email pre-filled
+            router.replace(`/login?action=set_password&token=${token}&email=${encodeURIComponent(invitation.email)}`);
+            return;
+          } catch (error) {
+            console.error('Error processing invitation:', error);
+            setError('Error processing invitation.');
+            setTimeout(() => router.push('/login?error=invitation_failed'), 2000);
+            return;
+          }
+        }
+
+        // For non-invitation callbacks, check session
         const { data, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -26,23 +67,9 @@ function AuthCallbackContent() {
         }
 
         if (data.session) {
-          // Check the type of auth callback
-          const type = searchParams.get('type');
-          const token = searchParams.get('token');
-
           if (type === 'recovery') {
             // Redirect to password reset form
             router.push('/login?action=reset_password');
-          } else if (type === 'invite' && token) {
-            // Handle invitation acceptance - redirect to password setup
-            try {
-              // Don't update invitation status yet - do it after password setup
-              // Just redirect to login with invitation info
-              router.replace(`/login?action=set_password&token=${token}`);
-            } catch (error) {
-              console.error('Error processing invitation:', error);
-              router.replace('/login?error=invitation_failed');
-            }
           } else {
             // Regular login, redirect to dashboard
             router.replace('/');

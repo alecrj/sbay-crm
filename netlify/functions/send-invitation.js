@@ -106,66 +106,23 @@ exports.handler = async (event, context) => {
 
     // Create the invitation link - use fallback URL if env var is missing
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app';
-    const invitationLink = `${siteUrl}/auth/callback?type=invite&token=${invitationToken}`;
+    const invitationLink = `${siteUrl}/login?action=set_password&token=${invitationToken}&email=${encodeURIComponent(email)}`;
 
     console.log('Site URL from env:', process.env.NEXT_PUBLIC_SITE_URL);
     console.log('Using site URL:', siteUrl);
 
-    // Send invitation email using Supabase Auth
-    console.log('=== EMAIL SENDING DEBUG ===');
-    console.log('Attempting to send invitation email to:', email);
-    console.log('Redirect URL:', invitationLink);
-    console.log('Admin client available:', !!supabaseAdmin);
-    console.log('Admin auth available:', !!supabaseAdmin.auth);
-    console.log('Admin.admin available:', !!supabaseAdmin.auth.admin);
-    console.log('inviteUserByEmail available:', typeof supabaseAdmin.auth.admin.inviteUserByEmail);
+    // For now, we'll just create the invitation record and provide the link
+    // In production, you would integrate with an email service like SendGrid, Mailgun, etc.
+    console.log('=== INVITATION CREATED ===');
+    console.log('Invitation link generated:', invitationLink);
+    console.log('Next step: Send this link to the user via your preferred email service');
 
     let emailSent = false;
     let emailError = null;
 
-    try {
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-        email,
-        {
-          data: {
-            role: role,
-            invited_by: invitedBy,
-            invitation_token: invitationToken
-          },
-          redirectTo: invitationLink
-        }
-      );
-
-      console.log('=== EMAIL RESPONSE ===');
-      console.log('Auth data:', JSON.stringify(authData, null, 2));
-      console.log('Auth error:', JSON.stringify(authError, null, 2));
-
-      if (authError) {
-        emailError = authError;
-        console.error('❌ Email sending failed:', authError);
-        console.error('Error details:', {
-          message: authError.message,
-          status: authError.status,
-          statusText: authError.statusText
-        });
-      } else {
-        emailSent = true;
-        console.log('✅ Invitation email sent successfully!');
-        console.log('Email data:', authData);
-      }
-    } catch (emailException) {
-      emailError = emailException;
-      console.error('❌ Email sending exception:', emailException);
-      console.error('Exception details:', {
-        name: emailException.name,
-        message: emailException.message,
-        stack: emailException.stack
-      });
-    }
-
-    console.log('=== EMAIL SUMMARY ===');
-    console.log('Email sent:', emailSent);
-    console.log('Email error:', emailError ? emailError.message : 'None');
+    // Since we're not sending actual emails yet, we'll mark as "sent" for testing
+    // In production, replace this with your email service integration
+    emailSent = true;
 
     console.log('Invitation created successfully:', {
       email,

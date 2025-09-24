@@ -31,6 +31,7 @@ export default function InvitationsPage() {
   const [message, setMessage] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastInvitedEmail, setLastInvitedEmail] = useState('');
+  const [lastInvitationLink, setLastInvitationLink] = useState('');
 
   // Temporarily disable admin check to debug
   // useEffect(() => {
@@ -90,6 +91,7 @@ export default function InvitationsPage() {
       }
 
       setLastInvitedEmail(formData.email);
+      setLastInvitationLink(data.invitation?.invitationLink || '');
       setFormData({ email: '', role: 'user' });
       setShowForm(false);
       setShowSuccessModal(true);
@@ -100,19 +102,78 @@ export default function InvitationsPage() {
     }
   };
 
-  const revokeInvitation = async (id: string) => {
-    if (!confirm('Are you sure you want to revoke this invitation?')) return;
+  const revokeInvitation = async (id: string, email: string) => {
+    if (!confirm(`Are you sure you want to revoke access for ${email}? This will delete their user account.`)) return;
 
     try {
+      // First, find the user in auth.users to get their auth ID
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+      if (authError) throw authError;
+
+      const authUser = authUsers.users.find(user => user.email === email);
+
+      if (authUser) {
+        // Delete the user account from Supabase Auth
+        const { error: deleteError } = await supabase.auth.admin.deleteUser(authUser.id);
+        if (deleteError) throw deleteError;
+      }
+
+      // Update invitation status to revoked
       const { error } = await supabase
         .from('invited_users')
-        .update({ status: 'expired' })
+        .update({ status: 'revoked' })
         .eq('id', id);
 
       if (error) throw error;
       await loadInvitations();
     } catch (error) {
       console.error('Error revoking invitation:', error);
+      alert(`❌ Error revoking access: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteInvitation = async (id: string, email: string) => {
+    if (!confirm(`Are you sure you want to permanently delete the invitation for ${email}?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('invited_users')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadInvitations();
+    } catch (error) {
+      console.error('Error deleting invitation:', error);
+    }
+  };
+
+  const resendInvitation = async (invitation: Invitation) => {
+    try {
+      const response = await fetch('/.netlify/functions/send-invitation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: invitation.email,
+          role: invitation.role,
+          invitedBy: user?.id
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}: Server Error`);
+      }
+
+      setLastInvitedEmail(invitation.email);
+      setLastInvitationLink(data.invitation?.invitationLink || '');
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+      alert(`❌ Error resending invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -125,6 +186,7 @@ export default function InvitationsPage() {
       case 'accepted': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'expired': return 'bg-red-100 text-red-800';
+      case 'revoked': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -243,37 +305,37 @@ export default function InvitationsPage() {
         {/* Success Modal */}
         {showSuccessModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="bg-white rounded-lg max-w-lg w-full p-6">
               <div className="text-center mb-6">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Invitation Sent!</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">Invitation Created!</h2>
                 <p className="text-gray-600">
                   <strong>{lastInvitedEmail}</strong> has been invited to join your CRM.
                 </p>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-green-900 mb-2">✅ Invitation Email Sent!</h3>
-                <div className="text-sm text-green-800 space-y-2">
-                  <p><strong>What happens next:</strong></p>
-                  <p>• {lastInvitedEmail} will receive a secure invitation email</p>
-                  <p>• They click the magic link to automatically create their account</p>
-                  <p>• Their account is created and they're immediately logged in</p>
-                  <p>• No passwords needed - completely secure and automatic</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-blue-900 mb-2">📋 Manual Invitation Link (For Testing)</h3>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <p><strong>Send this link to {lastInvitedEmail}:</strong></p>
+                  <div className="bg-white p-2 rounded border text-xs break-all">
+                    {lastInvitationLink || `${window.location.origin}/login?action=set_password&token=TOKEN&email=${encodeURIComponent(lastInvitedEmail)}`}
+                  </div>
+                  <p className="text-xs">💡 In production, this would be sent automatically via email service</p>
                 </div>
               </div>
 
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
-                <h4 className="font-medium text-gray-900 mb-2">Security Features:</h4>
-                <div className="text-sm text-gray-700 space-y-1">
-                  <p>• Invitation expires in 7 days</p>
-                  <p>• One-time use secure token</p>
-                  <p>• Only invited emails can create accounts</p>
-                  <p>• Role automatically assigned ({lastInvitedEmail ? 'Admin' : 'User'})</p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-green-900 mb-2">✅ What happens next:</h3>
+                <div className="text-sm text-green-800 space-y-2">
+                  <p>• User clicks the invitation link</p>
+                  <p>• They create a password for their account</p>
+                  <p>• Account is automatically created and they can log in</p>
+                  <p>• Role is automatically assigned based on invitation</p>
                 </div>
               </div>
 
@@ -368,14 +430,37 @@ export default function InvitationsPage() {
                         {formatDate(invitation.expires_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {invitation.status === 'accepted' && (
-                          <button
-                            onClick={() => revokeInvitation(invitation.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Revoke
-                          </button>
-                        )}
+                        <div className="flex space-x-2">
+                          {invitation.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => resendInvitation(invitation)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Resend invitation"
+                              >
+                                Resend
+                              </button>
+                              <span className="text-gray-400">•</span>
+                            </>
+                          )}
+                          {invitation.status === 'accepted' ? (
+                            <button
+                              onClick={() => revokeInvitation(invitation.id, invitation.email)}
+                              className="text-orange-600 hover:text-orange-900"
+                              title="Revoke access and delete user account"
+                            >
+                              Revoke
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => deleteInvitation(invitation.id, invitation.email)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete invitation"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

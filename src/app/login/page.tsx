@@ -38,8 +38,12 @@ export default function LoginPage() {
 
       if (action === 'set_password') {
         const token = searchParams.get('token');
+        const emailParam = searchParams.get('email');
         if (token) {
           setInvitationToken(token);
+          if (emailParam) {
+            setEmail(decodeURIComponent(emailParam));
+          }
           setIsPasswordSetup(true);
           setMessage('Welcome! Please set up your password to complete account creation.');
         }
@@ -208,6 +212,11 @@ export default function LoginPage() {
   const handlePasswordSetup = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!email.trim()) {
+      setMessage('Email is required');
+      return;
+    }
+
     if (!password.trim() || !confirmPassword.trim()) {
       setMessage('Please enter and confirm your password');
       return;
@@ -227,22 +236,42 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      // Update the user's password
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
+      // Get invitation details
+      const { data: invitation, error: invitationError } = await supabase
+        .from('invited_users')
+        .select('*')
+        .eq('invitation_token', invitationToken)
+        .eq('status', 'pending')
+        .single();
 
-      if (error) throw error;
-
-      // Update invitation status to accepted
-      if (invitationToken) {
-        await supabase
-          .from('invited_users')
-          .update({ status: 'accepted' })
-          .eq('invitation_token', invitationToken);
+      if (invitationError || !invitation) {
+        throw new Error('Invalid invitation token');
       }
 
-      setMessage('Account setup complete! You can now sign in with your new password.');
+      // Create user account with email and password
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: {
+            role: invitation.role,
+            invited_by: invitation.invited_by
+          }
+        }
+      });
+
+      if (signUpError) throw signUpError;
+
+      // Update invitation status to accepted
+      await supabase
+        .from('invited_users')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString()
+        })
+        .eq('invitation_token', invitationToken);
+
+      setMessage('Account created successfully! You can now sign in with your email and password.');
       setIsPasswordSetup(false);
       setPassword('');
       setConfirmPassword('');
