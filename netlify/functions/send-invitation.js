@@ -47,12 +47,16 @@ exports.handler = async (event, context) => {
       };
     }
 
+    // Generate invitation token
+    const invitationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
     // Store invitation in database first
     const inviteData = {
       email,
       role,
       invited_by: invitedBy,
       status: 'pending',
+      invitation_token: invitationToken,
       created_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     };
