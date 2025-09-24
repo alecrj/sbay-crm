@@ -339,16 +339,6 @@ export default function InvitationsPage() {
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-          <h3 className="font-medium text-green-900 mb-2">✅ Secure Email Invitation System</h3>
-          <div className="text-sm text-green-800 space-y-2">
-            <p><strong>1. Send invitations</strong> - Enter email and select role, system automatically sends invitation email</p>
-            <p><strong>2. Secure magic link</strong> - Invited user receives email with secure invitation link</p>
-            <p><strong>3. One-click setup</strong> - They click the link to automatically create their account</p>
-            <p><strong>4. Immediate access</strong> - Account is created and they're logged in</p>
-          </div>
-        </div>
 
         {/* Invitations Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
