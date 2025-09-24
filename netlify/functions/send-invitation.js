@@ -48,21 +48,33 @@ exports.handler = async (event, context) => {
     }
 
     // Store invitation in database first
-    const { error: dbError } = await supabaseAdmin
+    const inviteData = {
+      email,
+      role,
+      invited_by: invitedBy,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    };
+
+    console.log('Attempting to insert invitation data:', inviteData);
+
+    const { data: insertData, error: dbError } = await supabaseAdmin
       .from('invited_users')
-      .upsert({
-        email,
-        role,
-        invited_by: invitedBy,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
-      });
+      .upsert(inviteData);
 
     if (dbError) {
-      console.error('Database error storing invitation:', dbError);
-      throw new Error('Failed to store invitation in database');
+      console.error('Database error details:', {
+        message: dbError.message,
+        details: dbError.details,
+        hint: dbError.hint,
+        code: dbError.code,
+        data: inviteData
+      });
+      throw new Error(`Database error: ${dbError.message}`);
     }
+
+    console.log('Invitation stored successfully:', insertData);
 
     // Send invitation email using Supabase auth
     const { error: emailError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
