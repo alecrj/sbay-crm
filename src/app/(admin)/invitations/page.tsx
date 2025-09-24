@@ -79,7 +79,12 @@ export default function InvitationsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send invitation');
+        console.error('Invitation API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data
+        });
+        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       setLastInvitedEmail(formData.email);
