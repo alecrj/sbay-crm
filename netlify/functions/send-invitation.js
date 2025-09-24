@@ -104,8 +104,12 @@ exports.handler = async (event, context) => {
       throw dbError;
     }
 
-    // Create the invitation link
-    const invitationLink = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=invite&token=${invitationToken}`;
+    // Create the invitation link - use fallback URL if env var is missing
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app';
+    const invitationLink = `${siteUrl}/auth/callback?type=invite&token=${invitationToken}`;
+
+    console.log('Site URL from env:', process.env.NEXT_PUBLIC_SITE_URL);
+    console.log('Using site URL:', siteUrl);
 
     // Send invitation email using Supabase Auth
     console.log('=== EMAIL SENDING DEBUG ===');
