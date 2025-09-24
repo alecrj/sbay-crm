@@ -107,6 +107,33 @@ exports.handler = async (event, context) => {
     // Create the invitation link
     const invitationLink = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=invite&token=${invitationToken}`;
 
+    // Send invitation email using Supabase Auth
+    console.log('Attempting to send invitation email...');
+    try {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        email,
+        {
+          data: {
+            role: role,
+            invited_by: invitedBy,
+            invitation_token: invitationToken
+          },
+          redirectTo: invitationLink
+        }
+      );
+
+      if (authError) {
+        console.error('Email sending error:', authError);
+        // Don't fail the whole process, but log the error
+        console.log('Invitation created but email failed to send:', authError.message);
+      } else {
+        console.log('Invitation email sent successfully:', authData);
+      }
+    } catch (emailError) {
+      console.error('Email sending exception:', emailError);
+      // Don't fail the whole process, continue with success
+    }
+
     console.log('Invitation created successfully:', {
       email,
       role,
