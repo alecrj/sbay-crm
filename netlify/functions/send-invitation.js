@@ -81,18 +81,36 @@ exports.handler = async (event, context) => {
 
     console.log('Invitation stored successfully:', insertData);
 
-    // Send invitation email using Supabase's proper invitation system
-    const { data: inviteData, error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`,
-      data: {
-        role: role,
-        invited_by: invitedBy
-      }
-    });
+    // Check if user already exists in auth system
+    const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = listError ? null : authUsers.users.find(user => user.email === email);
 
-    if (emailError) {
-      console.error('Email error:', emailError);
-      throw new Error('Failed to send invitation email');
+    if (existingUser) {
+      console.log('User already exists, sending password reset instead');
+      // Send password reset for existing users
+      const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`
+      });
+
+      if (resetError) {
+        console.error('Password reset error:', resetError);
+        throw new Error('Failed to send password reset email');
+      }
+    } else {
+      console.log('New user, sending invitation');
+      // Send invitation email for new users
+      const { data: inviteData, error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`,
+        data: {
+          role: role,
+          invited_by: invitedBy
+        }
+      });
+
+      if (emailError) {
+        console.error('Invitation error:', emailError);
+        throw new Error('Failed to send invitation email');
+      }
     }
 
     return {
@@ -100,7 +118,9 @@ exports.handler = async (event, context) => {
       headers,
       body: JSON.stringify({
         success: true,
-        message: `Invitation sent to ${email}`
+        message: existingUser
+          ? `Password reset sent to ${email} (existing user)`
+          : `Invitation sent to ${email} (new user)`
       })
     };
 
