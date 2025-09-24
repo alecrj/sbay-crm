@@ -64,10 +64,8 @@ export default function InvitationsPage() {
     setMessage('');
 
     try {
-      // Use Next.js API route for development, Netlify function for production
-      const endpoint = process.env.NODE_ENV === 'development'
-        ? '/api/admin/send-invitation'
-        : '/.netlify/functions/send-invitation';
+      // Use simple invite function
+      const endpoint = '/.netlify/functions/simple-invite';
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -76,8 +74,7 @@ export default function InvitationsPage() {
         },
         body: JSON.stringify({
           email: formData.email,
-          role: formData.role,
-          invitedBy: user?.id
+          role: formData.role
         }),
       });
 
@@ -160,10 +157,8 @@ export default function InvitationsPage() {
 
   const resendInvitation = async (invitation: Invitation) => {
     try {
-      // Use Next.js API route for development, Netlify function for production
-      const endpoint = process.env.NODE_ENV === 'development'
-        ? '/api/admin/send-invitation'
-        : '/.netlify/functions/send-invitation';
+      // Use simple invite function
+      const endpoint = '/.netlify/functions/simple-invite';
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -172,8 +167,7 @@ export default function InvitationsPage() {
         },
         body: JSON.stringify({
           email: invitation.email,
-          role: invitation.role,
-          invitedBy: user?.id
+          role: invitation.role
         }),
       });
 
