@@ -64,7 +64,7 @@ export default function InvitationsPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/admin/send-invitation', {
+      const response = await fetch('/.netlify/functions/send-invitation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
