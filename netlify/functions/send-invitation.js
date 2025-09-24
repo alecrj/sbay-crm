@@ -55,22 +55,18 @@ exports.handler = async (event, context) => {
     const existingUser = listError ? null : authUsers.users.find(user => user.email === email);
 
     if (existingUser) {
-      console.log('User already exists, sending password reset instead');
+      console.log('User already exists, sending password reset email');
 
-      // Send password reset email for existing users
-      const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'recovery',
-        email: email,
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`
-        }
+      // Send password reset email for existing users (this actually sends the email)
+      const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/login`
       });
 
       if (resetError) {
-        console.error('❌ Password reset generation failed:', resetError);
+        console.error('❌ Password reset email failed:', resetError);
         throw resetError;
       } else {
-        console.log('✅ Password reset link generated:', resetData?.properties?.action_link || 'no link returned');
+        console.log('✅ Password reset email sent successfully');
       }
 
       // Update their role in user metadata
