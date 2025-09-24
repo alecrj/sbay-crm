@@ -133,20 +133,41 @@ exports.handler = async (event, context) => {
     console.error('Error sending invitation:', error);
     console.error('Error type:', typeof error);
     console.error('Error constructor:', error?.constructor?.name);
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-      toString: error?.toString?.()
-    });
+    console.error('Error JSON:', JSON.stringify(error, null, 2));
+
+    // Extract error message from various possible formats
+    let errorMessage = 'Unknown error';
+    let errorDetails = 'No details available';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      errorDetails = error.stack || error.message;
+    } else if (error && typeof error === 'object') {
+      // Handle Supabase error objects
+      errorMessage = error.message || error.error_description || error.error || 'Database error';
+      errorDetails = JSON.stringify(error, null, 2);
+
+      // Log specific properties we might find
+      console.error('Error properties:', {
+        message: error.message,
+        error: error.error,
+        error_description: error.error_description,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+    } else {
+      errorMessage = String(error);
+      errorDetails = String(error);
+    }
 
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
-        error: error instanceof Error ? error.message : `Failed to send invitation: ${String(error)}`,
-        details: error instanceof Error ? error.stack : `Error type: ${typeof error}, Constructor: ${error?.constructor?.name}, String: ${String(error)}`,
-        rawError: String(error)
+        error: errorMessage,
+        details: errorDetails,
+        rawError: typeof error === 'object' ? JSON.stringify(error) : String(error)
       })
     };
   }
