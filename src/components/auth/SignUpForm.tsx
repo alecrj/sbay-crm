@@ -69,7 +69,7 @@ export default function SignUpForm() {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Please check your email to verify your account before signing in.
             </p>
-            <Link href="/signin" className="inline-flex items-center px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600">
+            <Link href="/login" className="inline-flex items-center px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600">
               Go to Login
             </Link>
           </div>
@@ -301,7 +301,7 @@ export default function SignUpForm() {
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
                 Already have an account?
                 <Link
-                  href="/signin"
+                  href="/login"
                   className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
                 >
                   Sign In

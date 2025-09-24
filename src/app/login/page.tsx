@@ -70,6 +70,21 @@ export default function LoginPage() {
       const { error } = await signIn(email, password);
       if (error) throw error;
 
+      // Check if this is a temporary password login
+      const { data: invitation } = await supabase
+        .from('invited_users')
+        .select('temporary_password, password_changed')
+        .eq('email', email)
+        .eq('temporary_password', password)
+        .single();
+
+      if (invitation && !invitation.password_changed) {
+        // This is a temporary password - redirect to password change
+        setIsPasswordReset(true);
+        setMessage('Welcome! Please set your permanent password to continue.');
+        return;
+      }
+
       // Success - AuthContext will handle redirect
     } catch (error: any) {
       console.error('Login error:', error);
@@ -193,6 +208,12 @@ export default function LoginPage() {
       });
 
       if (error) throw error;
+
+      // Mark password as changed in invitation record
+      await supabase
+        .from('invited_users')
+        .update({ password_changed: true })
+        .eq('email', email);
 
       setMessage('Password updated successfully! You can now sign in.');
       setIsPasswordReset(false);
