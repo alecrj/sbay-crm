@@ -108,29 +108,36 @@ export default function InvitationsPage() {
   };
 
   const revokeInvitation = async (id: string, email: string) => {
-    if (!confirm(`Are you sure you want to revoke access for ${email}? This will delete their user account.`)) return;
+    if (!confirm(`Are you sure you want to revoke access for ${email}? This will permanently delete their user account.`)) return;
 
     try {
-      // First, find the user in auth.users to get their auth ID
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      if (authError) throw authError;
+      // Use appropriate endpoint based on environment
+      const endpoint = process.env.NODE_ENV === 'development'
+        ? '/api/admin/revoke-user'
+        : '/.netlify/functions/revoke-user';
 
-      const authUser = authUsers.users.find(user => user.email === email);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          invitationId: id
+        }),
+      });
 
-      if (authUser) {
-        // Delete the user account from Supabase Auth
-        const { error: deleteError } = await supabase.auth.admin.deleteUser(authUser.id);
-        if (deleteError) throw deleteError;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP ${response.status}: Server Error`);
       }
 
-      // Update invitation status to revoked
-      const { error } = await supabase
-        .from('invited_users')
-        .update({ status: 'revoked' })
-        .eq('id', id);
-
-      if (error) throw error;
+      console.log('Revoke response:', data);
       await loadInvitations();
+
+      // Show success message
+      alert(`✅ Access revoked for ${email}. ${data.userDeleted ? 'User account deleted.' : 'No user account found.'}`);
     } catch (error) {
       console.error('Error revoking invitation:', error);
       alert(`❌ Error revoking access: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -329,23 +336,37 @@ export default function InvitationsPage() {
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-green-900 mb-2">✅ Invitation Email Sent!</h3>
+                <h3 className="font-medium text-green-900 mb-2">✅ Invitation Created Successfully!</h3>
                 <div className="text-sm text-green-800 space-y-2">
-                  <p><strong>Automatic email sent to {lastInvitedEmail}</strong></p>
-                  <p>• They will receive a secure invitation email from Supabase</p>
-                  <p>• The email contains a magic link to set up their password</p>
-                  <p>• Once they set their password, they can log in immediately</p>
+                  <p><strong>Invitation prepared for {lastInvitedEmail}</strong></p>
+                  <p>• Automatic email attempted via Supabase Auth</p>
+                  <p>• If email doesn't arrive, use the manual link below</p>
+                  <p>• The link allows them to set up their password and access the CRM</p>
                 </div>
               </div>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-blue-900 mb-2">📋 Backup Manual Link</h3>
+                <h3 className="font-medium text-blue-900 mb-2">📋 Reliable Invitation Link</h3>
                 <div className="text-sm text-blue-800 space-y-2">
-                  <p><strong>If email doesn't arrive, share this link:</strong></p>
-                  <div className="bg-white p-2 rounded border text-xs break-all">
+                  <p><strong>Send this link to {lastInvitedEmail}:</strong></p>
+                  <div className="bg-white p-2 rounded border text-xs break-all font-mono">
                     {lastInvitationLink || `${window.location.origin}/login?action=set_password&token=TOKEN&email=${encodeURIComponent(lastInvitedEmail)}`}
                   </div>
-                  <p className="text-xs">💡 This is the same link that was sent via email</p>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(lastInvitationLink || `${window.location.origin}/login?action=set_password&token=TOKEN&email=${encodeURIComponent(lastInvitedEmail)}`)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                    >
+                      📋 Copy Link
+                    </button>
+                    <button
+                      onClick={() => window.open(`mailto:${lastInvitedEmail}?subject=You're invited to join Shallow Bay CRM&body=You've been invited to join our CRM system. Click this link to set up your account: ${lastInvitationLink || `${window.location.origin}/login?action=set_password&token=TOKEN&email=${encodeURIComponent(lastInvitedEmail)}`}`, '_blank')}
+                      className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700"
+                    >
+                      ✉️ Send via Email
+                    </button>
+                  </div>
+                  <p className="text-xs">💡 This link bypasses any email delivery issues and always works</p>
                 </div>
               </div>
 

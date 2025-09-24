@@ -127,36 +127,87 @@ exports.handler = async (event, context) => {
     let emailError = null;
 
     try {
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-        email,
-        {
-          data: {
-            role: role,
-            invited_by: invitedBy,
-            invitation_token: invitationToken
-          },
-          redirectTo: invitationLink
-        }
-      );
+      // Check if user already exists in auth system
+      const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+      const existingAuthUser = listError ? null : authUsers.users.find(user => user.email === email);
 
-      console.log('=== EMAIL RESPONSE ===');
-      console.log('Auth data:', JSON.stringify(authData, null, 2));
-      console.log('Auth error:', JSON.stringify(authError, null, 2));
+      if (existing && existingAuthUser) {
+        // This is a resend to someone who already has an auth account
+        console.log('Resending to existing auth user - using password reset flow');
 
-      if (authError) {
-        emailError = authError;
-        console.error('❌ Email sending failed:', authError);
-        console.error('Error details:', {
-          message: authError.message,
-          status: authError.status,
-          statusText: authError.statusText
+        const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'recovery',
+          email: email,
+          options: {
+            redirectTo: invitationLink
+          }
         });
-        // Don't fail the whole process if email fails
-        emailSent = false;
+
+        if (resetError) {
+          emailError = resetError;
+          console.error('❌ Password reset email failed:', resetError);
+          emailSent = false;
+        } else {
+          emailSent = true;
+          console.log('✅ Password reset email sent for resend!');
+        }
       } else {
-        emailSent = true;
-        console.log('✅ Invitation email sent successfully!');
-        console.log('Email data:', authData);
+        // This is a new invitation or resend to someone without auth account
+        console.log('Sending new invitation email');
+
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+          email,
+          {
+            data: {
+              role: role,
+              invited_by: invitedBy,
+              invitation_token: invitationToken
+            },
+            redirectTo: invitationLink
+          }
+        );
+
+        console.log('=== EMAIL RESPONSE ===');
+        console.log('Auth data:', JSON.stringify(authData, null, 2));
+        console.log('Auth error:', JSON.stringify(authError, null, 2));
+
+        if (authError) {
+          emailError = authError;
+          console.error('❌ Email sending failed:', authError);
+          console.error('Error details:', {
+            message: authError.message,
+            status: authError.status,
+            statusText: authError.statusText
+          });
+
+          // If invite fails because user exists, try password reset instead
+          if (authError.message?.includes('already registered') || authError.message?.includes('already exists')) {
+            console.log('User exists, trying password reset instead...');
+
+            const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+              type: 'recovery',
+              email: email,
+              options: {
+                redirectTo: invitationLink
+              }
+            });
+
+            if (resetError) {
+              emailSent = false;
+              emailError = resetError;
+            } else {
+              emailSent = true;
+              emailError = null;
+              console.log('✅ Password reset email sent as fallback!');
+            }
+          } else {
+            emailSent = false;
+          }
+        } else {
+          emailSent = true;
+          console.log('✅ Invitation email sent successfully!');
+          console.log('Email data:', authData);
+        }
       }
     } catch (emailException) {
       emailError = emailException;
@@ -166,7 +217,6 @@ exports.handler = async (event, context) => {
         message: emailException.message,
         stack: emailException.stack
       });
-      // Don't fail the whole process if email fails
       emailSent = false;
     }
 
