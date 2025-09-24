@@ -145,8 +145,7 @@ export default function LoginPage() {
           await supabase
             .from('invited_users')
             .update({
-              status: 'accepted',
-              accepted_at: new Date().toISOString()
+              status: 'accepted'
             })
             .eq('email', user.email);
         }
@@ -204,8 +203,7 @@ export default function LoginPage() {
           await supabase
             .from('invited_users')
             .update({
-              status: 'accepted',
-              accepted_at: new Date().toISOString()
+              status: 'accepted'
             })
             .eq('email', user.email);
         }

@@ -43,8 +43,7 @@ exports.handler = async (event, context) => {
     const { error } = await supabaseAdmin
       .from('invited_users')
       .update({
-        status: 'accepted',
-        accepted_at: new Date().toISOString()
+        status: 'accepted'
       })
       .eq('email', email);
 
