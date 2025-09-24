@@ -50,7 +50,12 @@ export default function LoginPage() {
       }
 
       if (error) {
-        setMessage('There was an issue with authentication. Please try again.');
+        const errorDescription = searchParams.get('error_description');
+        if (error === 'access_denied' && errorDescription?.includes('expired')) {
+          setMessage('Password reset link has expired. Please request a new one using "Forgot Password" below.');
+        } else {
+          setMessage('There was an issue with authentication. Please try again.');
+        }
       }
     }
   }, [user, router, searchParams]);
@@ -184,6 +189,11 @@ export default function LoginPage() {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!email.trim()) {
+      setMessage('Please enter your email address');
+      return;
+    }
+
     if (!password.trim() || !confirmPassword.trim()) {
       setMessage('Please enter and confirm your new password');
       return;
@@ -203,25 +213,27 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      // First update the password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Mark password as changed in invitation record
-      await supabase
-        .from('invited_users')
-        .update({ password_changed: true })
-        .eq('email', email);
+      // Then automatically sign in the user with their new password
+      const { error: signInError } = await signIn(email, password);
 
-      setMessage('Password updated successfully! You can now sign in.');
-      setIsPasswordReset(false);
-      setPassword('');
-      setConfirmPassword('');
-
-      // Clear URL parameters
-      window.history.replaceState({}, document.title, '/login');
+      if (signInError) {
+        // If auto sign-in fails, show success message and let them sign in manually
+        setMessage('Password updated successfully! Please sign in with your new password.');
+        setIsPasswordReset(false);
+        setPassword('');
+        setConfirmPassword('');
+        window.history.replaceState({}, document.title, '/login');
+      } else {
+        // Success - they will be automatically redirected by AuthContext
+        setMessage('Password updated and signed in successfully!');
+      }
     } catch (error: any) {
       console.error('Password update error:', error);
       setMessage(`Error: ${error.message || 'Password update failed'}`);
@@ -380,6 +392,7 @@ export default function LoginPage() {
                 placeholder="your@email.com"
                 disabled={isPasswordSetup}
                 style={isPasswordSetup ? { opacity: 0.6 } : {}}
+                readOnly={isPasswordSetup}
               />
             </div>
 
