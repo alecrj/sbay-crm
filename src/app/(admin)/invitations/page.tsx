@@ -95,7 +95,6 @@ export default function InvitationsPage() {
       }
 
       setLastInvitedEmail(formData.email);
-      setLastInvitationLink(data.invitation?.invitationLink || '');
       setFormData({ email: '', role: 'user' });
       setShowForm(false);
       setShowSuccessModal(true);

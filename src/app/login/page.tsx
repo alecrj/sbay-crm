@@ -22,9 +22,12 @@ export default function LoginPage() {
     if (searchParams) {
       const error = searchParams.get('error');
       const type = searchParams.get('type');
+      const accessToken = searchParams.get('access_token');
+      const refreshToken = searchParams.get('refresh_token');
 
-      // Handle both invitation and password reset flows the same way
-      if (type === 'recovery' || type === 'invite') {
+      // Handle both invitation and password reset flows
+      if (type === 'recovery' || type === 'invite' || (accessToken && refreshToken)) {
+        console.log('Password setup flow detected, type:', type, 'hasTokens:', !!(accessToken && refreshToken));
         setIsPasswordSetup(true);
         setMessage('Please set your password to continue.');
         return; // Don't redirect if this is a password setup flow
@@ -44,6 +47,7 @@ export default function LoginPage() {
 
     // Only redirect if already logged in AND not in a password setup flow
     if (user && !isPasswordSetup) {
+      console.log('Redirecting logged in user to dashboard');
       router.push('/');
     }
   }, [user, router, searchParams, isPasswordSetup]);
