@@ -10,11 +10,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [invitationToken, setInvitationToken] = useState('');
   const [isPasswordSetup, setIsPasswordSetup] = useState(false);
   const { user, signIn, signUp, resetPassword } = useAuth();
   const router = useRouter();
@@ -26,33 +23,22 @@ export default function LoginPage() {
       router.push('/');
     }
 
-    // Check if this is a password reset
+    // Check URL parameters for password setup flows
     if (searchParams) {
-      const action = searchParams.get('action');
       const error = searchParams.get('error');
+      const type = searchParams.get('type');
 
-      if (action === 'reset_password') {
-        setIsPasswordReset(true);
-        setMessage('You can now set a new password for your account.');
+      // Handle both invitation and password reset flows the same way
+      if (type === 'recovery' || type === 'invite') {
+        setIsPasswordSetup(true);
+        setMessage('Please set your password to continue.');
       }
 
-      if (action === 'set_password') {
-        const token = searchParams.get('token');
-        const emailParam = searchParams.get('email');
-        if (token) {
-          setInvitationToken(token);
-          if (emailParam) {
-            setEmail(decodeURIComponent(emailParam));
-          }
-          setIsPasswordSetup(true);
-          setMessage('Welcome! Please set up your password to complete account creation.');
-        }
-      }
-
+      // Handle expired links
       if (error) {
         const errorDescription = searchParams.get('error_description');
         if (error === 'access_denied' && errorDescription?.includes('expired')) {
-          setMessage('Password reset link has expired. Please request a new one using "Forgot Password" below.');
+          setMessage('Link has expired. Please request a new invitation or use "Forgot Password".');
         } else {
           setMessage('There was an issue with authentication. Please try again.');
         }
@@ -74,29 +60,11 @@ export default function LoginPage() {
     try {
       const { error } = await signIn(email, password);
       if (error) throw error;
-
-      // Check if this is a temporary password login
-      const { data: invitation } = await supabase
-        .from('invited_users')
-        .select('temporary_password, password_changed')
-        .eq('email', email)
-        .eq('temporary_password', password)
-        .single();
-
-      if (invitation && !invitation.password_changed) {
-        // This is a temporary password - redirect to password change
-        setIsPasswordReset(true);
-        setMessage('Welcome! Please set your permanent password to continue.');
-        return;
-      }
-
       // Success - AuthContext will handle redirect
     } catch (error: any) {
       console.error('Login error:', error);
-
-      // Check if user needs to set up password
       if (error.message?.includes('Invalid login credentials')) {
-        setMessage('Invalid email or password. Need to set up your account? Contact admin or use "Forgot Password".');
+        setMessage('Invalid email or password.');
       } else {
         setMessage(`Error: ${error.message || 'Login failed'}`);
       }
@@ -105,64 +73,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      setMessage('Please fill in all fields');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setMessage('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      setMessage('Password must be at least 6 characters');
-      return;
-    }
-
-    setLoading(true);
-    setMessage('');
-
-    try {
-      // Check if email is invited
-      const { data: invitation, error: invitationError } = await supabase
-        .from('invited_users')
-        .select('*')
-        .eq('email', email)
-        .eq('status', 'pending')
-        .single();
-
-      if (invitationError || !invitation) {
-        throw new Error('No invitation found. Please contact an administrator for access.');
-      }
-
-      const { error } = await signUp(email, password, {
-        role: invitation.role,
-        invited_by: invitation.invited_by
-      });
-
-      if (error) throw error;
-
-      // Update invitation status
-      await supabase
-        .from('invited_users')
-        .update({ status: 'accepted' })
-        .eq('email', email);
-
-      setMessage('Account created successfully! You can now sign in.');
-      setIsSignUp(false);
-      setPassword('');
-      setConfirmPassword('');
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      setMessage(`Error: ${error.message || 'Sign up failed'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
@@ -189,11 +99,6 @@ export default function LoginPage() {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email.trim()) {
-      setMessage('Please enter your email address');
-      return;
-    }
-
     if (!password.trim() || !confirmPassword.trim()) {
       setMessage('Please enter and confirm your new password');
       return;
@@ -213,27 +118,19 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      // First update the password
-      const { error: updateError } = await supabase.auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      // Then automatically sign in the user with their new password
-      const { error: signInError } = await signIn(email, password);
+      // Password updated successfully - user will be automatically signed in
+      setMessage('Password updated successfully! Redirecting...');
 
-      if (signInError) {
-        // If auto sign-in fails, show success message and let them sign in manually
-        setMessage('Password updated successfully! Please sign in with your new password.');
-        setIsPasswordReset(false);
-        setPassword('');
-        setConfirmPassword('');
-        window.history.replaceState({}, document.title, '/login');
-      } else {
-        // Success - they will be automatically redirected by AuthContext
-        setMessage('Password updated and signed in successfully!');
-      }
+      // Small delay then redirect to dashboard
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
     } catch (error: any) {
       console.error('Password update error:', error);
       setMessage(`Error: ${error.message || 'Password update failed'}`);
@@ -244,11 +141,6 @@ export default function LoginPage() {
 
   const handlePasswordSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email.trim()) {
-      setMessage('Email is required');
-      return;
-    }
 
     if (!password.trim() || !confirmPassword.trim()) {
       setMessage('Please enter and confirm your password');
@@ -269,83 +161,22 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      console.log('=== PASSWORD SETUP DEBUG ===');
-      console.log('Email:', email);
-      console.log('Invitation Token:', invitationToken);
-
-      // Get invitation details
-      const { data: invitation, error: invitationError } = await supabase
-        .from('invited_users')
-        .select('*')
-        .eq('invitation_token', invitationToken)
-        .eq('status', 'pending')
-        .single();
-
-      console.log('Invitation data:', invitation);
-      console.log('Invitation error:', invitationError);
-
-      if (invitationError || !invitation) {
-        throw new Error(`Invalid invitation token: ${invitationError?.message || 'Not found'}`);
-      }
-
-      // Create user account with email and password
-      console.log('Creating user account...');
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            role: invitation.role,
-            invited_by: invitation.invited_by,
-            invitation_token: invitationToken
-          }
-        }
+      const { error } = await supabase.auth.updateUser({
+        password: password
       });
 
-      console.log('SignUp data:', authData);
-      console.log('SignUp error:', signUpError);
+      if (error) throw error;
 
-      // Handle the case where user already exists (from Supabase inviteUserByEmail)
-      if (signUpError && signUpError.message?.includes('already registered')) {
-        console.log('User already exists, this is expected from Supabase invitation system');
-        // This is actually success - the user was created by inviteUserByEmail
-      } else if (signUpError) {
-        throw signUpError;
-      }
+      // Password set successfully - user will be automatically signed in
+      setMessage('Account setup complete! Redirecting...');
 
-      // Update invitation status to accepted
-      const { error: updateError } = await supabase
-        .from('invited_users')
-        .update({
-          status: 'accepted',
-          accepted_at: new Date().toISOString()
-        })
-        .eq('invitation_token', invitationToken);
-
-      console.log('Invitation update error:', updateError);
-
-      setMessage('✅ Account setup complete! You can now sign in with your email and password.');
-
-      // Wait a moment then redirect to regular login
+      // Small delay then redirect to dashboard
       setTimeout(() => {
-        setIsPasswordSetup(false);
-        setPassword('');
-        setConfirmPassword('');
-        setInvitationToken('');
-        window.history.replaceState({}, document.title, '/login');
-      }, 2000);
-
+        window.location.href = '/';
+      }, 1000);
     } catch (error: any) {
       console.error('Password setup error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        statusText: error.statusText,
-        stack: error.stack
-      });
-
-      // Show detailed error message
-      setMessage(`❌ Error: ${error.message || 'Account setup failed'}. Please try again or contact support.`);
+      setMessage(`Error: ${error.message || 'Account setup failed'}`);
     } finally {
       setLoading(false);
     }
@@ -363,38 +194,30 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-white">
-            {isPasswordSetup ? 'Set Up Your Password' : isPasswordReset ? 'Set New Password' : isSignUp ? 'Complete Setup' : 'Welcome Back'}
+            {isPasswordSetup ? 'Set Your Password' : 'Welcome Back'}
           </h2>
           <p className="mt-2 text-blue-200">
-            {isPasswordSetup
-              ? 'Create your password to complete account setup'
-              : isPasswordReset
-                ? 'Enter your new password below'
-                : isSignUp
-                  ? 'Create your password to access your account'
-                  : 'Sign in to your CRM dashboard'
-            }
+            {isPasswordSetup ? 'Create your password to continue' : 'Sign in to your CRM dashboard'}
           </p>
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl border border-white/20 shadow-xl space-y-6">
-          <form onSubmit={isPasswordSetup ? handlePasswordSetup : isPasswordReset ? handlePasswordReset : isSignUp ? handleSignUp : handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                required={!isPasswordSetup}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
-                placeholder="your@email.com"
-                disabled={isPasswordSetup}
-                style={isPasswordSetup ? { opacity: 0.6 } : {}}
-                readOnly={isPasswordSetup}
-              />
-            </div>
+          <form onSubmit={isPasswordSetup ? handlePasswordSetup : handleLogin} className="space-y-6">
+            {!isPasswordSetup && (
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+                  placeholder="your@email.com"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -407,8 +230,8 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500 pr-12"
-                  placeholder={isSignUp ? "Create a secure password" : "Enter your password"}
-                  minLength={isSignUp ? 6 : undefined}
+                  placeholder={isPasswordSetup ? "Create a secure password" : "Enter your password"}
+                  minLength={isPasswordSetup ? 6 : undefined}
                 />
                 <button
                   type="button"
@@ -429,7 +252,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {(isSignUp || isPasswordSetup || isPasswordReset) && (
+            {isPasswordSetup && (
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Confirm Password
@@ -454,15 +277,15 @@ export default function LoginPage() {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {isPasswordSetup ? 'Setting Up Account...' : isSignUp ? 'Creating Account...' : 'Signing In...'}
+                  {isPasswordSetup ? 'Setting Password...' : 'Signing In...'}
                 </div>
               ) : (
-                isPasswordSetup ? 'Complete Setup' : isSignUp ? 'Create Account' : 'Sign In'
+                isPasswordSetup ? 'Set Password' : 'Sign In'
               )}
             </button>
           </form>
 
-          {!isSignUp && !isPasswordSetup && !isPasswordReset && (
+          {!isPasswordSetup && (
             <div className="flex items-center justify-between text-sm">
               <div className="text-blue-300/70 text-xs">
                 Invitation-only access
@@ -473,17 +296,6 @@ export default function LoginPage() {
                 className="text-blue-300 hover:text-blue-200 transition-colors"
               >
                 Forgot password?
-              </button>
-            </div>
-          )}
-
-          {isSignUp && (
-            <div className="text-center">
-              <button
-                onClick={() => setIsSignUp(false)}
-                className="text-blue-300 hover:text-blue-200 text-sm transition-colors"
-              >
-                Already have a password? Sign in instead
               </button>
             </div>
           )}

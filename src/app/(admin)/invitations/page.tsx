@@ -31,8 +31,6 @@ export default function InvitationsPage() {
   const [message, setMessage] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastInvitedEmail, setLastInvitedEmail] = useState('');
-  const [lastInvitationLink, setLastInvitationLink] = useState('');
-  const [lastTemporaryPassword, setLastTemporaryPassword] = useState('');
 
   // Temporarily disable admin check to debug
   // useEffect(() => {
@@ -187,8 +185,6 @@ export default function InvitationsPage() {
       }
 
       setLastInvitedEmail(invitation.email);
-      setLastInvitationLink(data.invitation?.invitationLink || '');
-      setLastTemporaryPassword(data.invitation?.temporaryPassword || '');
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error resending invitation:', error);
@@ -347,44 +343,11 @@ export default function InvitationsPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <h3 className="font-medium text-blue-900 mb-2">🔑 Login Credentials</h3>
-                <div className="text-sm text-blue-800 space-y-3">
-                  <p><strong>Send these credentials to {lastInvitedEmail}:</strong></p>
-
-                  <div className="bg-white p-3 rounded border space-y-2">
-                    <div><strong>Email:</strong> <span className="font-mono text-sm">{lastInvitedEmail}</span></div>
-                    <div><strong>Temporary Password:</strong> <span className="font-mono text-sm bg-yellow-100 px-2 py-1 rounded">{lastTemporaryPassword}</span></div>
-                    <div><strong>Login URL:</strong> <span className="font-mono text-sm">{window.location.origin}/login</span></div>
-                  </div>
-
-                  <div className="flex gap-2 mt-2">
-                    <button
-                      onClick={() => navigator.clipboard.writeText(`Login to Shallow Bay Advisors CRM:
-Email: ${lastInvitedEmail}
-Temporary Password: ${lastTemporaryPassword}
-Login at: ${window.location.origin}/login
-
-You'll be asked to set a permanent password after logging in.`)}
-                      className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
-                    >
-                      📋 Copy Credentials
-                    </button>
-                    <button
-                      onClick={() => window.open(`mailto:${lastInvitedEmail}?subject=Welcome to Shallow Bay Advisors CRM&body=Welcome to Shallow Bay Advisors CRM!
-
-Your login credentials:
-Email: ${lastInvitedEmail}
-Temporary Password: ${lastTemporaryPassword}
-Login URL: ${window.location.origin}/login
-
-You'll be prompted to set a permanent password after logging in.`, '_blank')}
-                      className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700"
-                    >
-                      ✉️ Send via Email
-                    </button>
-                  </div>
-                  <p className="text-xs">💡 This link bypasses any email delivery issues and always works</p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-green-900 mb-2">✅ Invitation Sent Successfully</h3>
+                <div className="text-sm text-green-800">
+                  <p><strong>{lastInvitedEmail}</strong> has been sent an email invitation with a link to set up their password.</p>
+                  <p className="mt-2 text-xs">They'll receive the email within a few minutes and can click the link to create their account.</p>
                 </div>
               </div>
 
