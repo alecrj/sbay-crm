@@ -110,8 +110,17 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error sending invitation:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
+    });
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to send invitation' },
+      {
+        error: error instanceof Error ? error.message : 'Failed to send invitation',
+        details: error instanceof Error ? error.stack : 'Unknown error type'
+      },
       { status: 500 }
     );
   }

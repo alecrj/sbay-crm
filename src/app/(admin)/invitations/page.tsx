@@ -79,12 +79,14 @@ export default function InvitationsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Invitation API Error:', {
+        console.error('Invitation API Error Details:', {
           status: response.status,
           statusText: response.statusText,
-          data
+          data: data,
+          fullResponse: response
         });
-        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+        console.error('Error data:', JSON.stringify(data, null, 2));
+        throw new Error(data.error || data.message || `HTTP ${response.status}: Server Error`);
       }
 
       setLastInvitedEmail(formData.email);
