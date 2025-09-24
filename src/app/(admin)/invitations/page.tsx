@@ -65,7 +65,12 @@ export default function InvitationsPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/.netlify/functions/send-invitation', {
+      // Use Next.js API route for development, Netlify function for production
+      const endpoint = process.env.NODE_ENV === 'development'
+        ? '/api/admin/send-invitation'
+        : '/.netlify/functions/send-invitation';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +155,12 @@ export default function InvitationsPage() {
 
   const resendInvitation = async (invitation: Invitation) => {
     try {
-      const response = await fetch('/.netlify/functions/send-invitation', {
+      // Use Next.js API route for development, Netlify function for production
+      const endpoint = process.env.NODE_ENV === 'development'
+        ? '/api/admin/send-invitation'
+        : '/.netlify/functions/send-invitation';
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

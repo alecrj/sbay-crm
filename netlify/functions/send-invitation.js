@@ -66,7 +66,7 @@ exports.handler = async (event, context) => {
     // Check if user already exists - skip this check for now as it requires admin API
     // We'll rely on invitation token uniqueness instead
 
-    // Check if email already has pending invitation
+    // Check if this is a resend (existing invitation)
     const { data: existing } = await supabaseAdmin
       .from('invited_users')
       .select('*')
@@ -74,34 +74,41 @@ exports.handler = async (event, context) => {
       .eq('status', 'pending')
       .single();
 
+    let invitation;
+    let invitationToken;
+
     if (existing) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'This email already has a pending invitation' })
-      };
-    }
+      // This is a resend - use existing invitation
+      invitation = existing;
+      invitationToken = existing.invitation_token;
+      console.log('Resending existing invitation for:', email);
+    } else {
+      // This is a new invitation - create new record
+      console.log('Creating new invitation for:', email);
 
-    // Generate secure invitation token
-    const invitationToken = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      // Generate secure invitation token
+      invitationToken = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    // Create invitation record
-    const { data: invitation, error: dbError } = await supabaseAdmin
-      .from('invited_users')
-      .insert([{
-        email,
-        role,
-        invited_by: invitedBy,
-        status: 'pending',
-        invitation_token: invitationToken,
-        expires_at: expiresAt.toISOString()
-      }])
-      .select()
-      .single();
+      // Create invitation record
+      const { data: newInvitation, error: dbError } = await supabaseAdmin
+        .from('invited_users')
+        .insert([{
+          email,
+          role,
+          invited_by: invitedBy,
+          status: 'pending',
+          invitation_token: invitationToken,
+          expires_at: expiresAt.toISOString()
+        }])
+        .select()
+        .single();
 
-    if (dbError) {
-      throw dbError;
+      if (dbError) {
+        throw dbError;
+      }
+
+      invitation = newInvitation;
     }
 
     // Create the invitation link - use fallback URL if env var is missing
@@ -135,14 +142,14 @@ exports.handler = async (event, context) => {
       headers,
       body: JSON.stringify({
         success: true,
-        message: `Invitation created for ${email}`,
+        message: existing ? `Invitation resent to ${email}` : `Invitation created for ${email}`,
         emailSent: emailSent,
         emailError: emailError ? emailError.message : null,
         invitation: {
           email,
           role,
           status: 'pending',
-          expires_at: expiresAt.toISOString(),
+          expires_at: invitation.expires_at,
           invitationLink
         }
       })
