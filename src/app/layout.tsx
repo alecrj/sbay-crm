@@ -6,8 +6,6 @@ import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UserRoleProvider } from '@/contexts/UserRoleContext';
-import EnvironmentCheck from '@/components/debug/EnvironmentCheck';
-import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'Shallow Bay Advisors CRM',
@@ -26,16 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.className} dark:bg-gray-900`}>
-        <EnvironmentCheck />
-        <ErrorBoundary>
-          <ThemeProvider>
-            <AuthProvider>
-              <UserRoleProvider>
-                <SidebarProvider>{children}</SidebarProvider>
-              </UserRoleProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </ErrorBoundary>
+        <ThemeProvider>
+          <AuthProvider>
+            <UserRoleProvider>
+              <SidebarProvider>{children}</SidebarProvider>
+            </UserRoleProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
