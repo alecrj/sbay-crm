@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase, Lead } from "@/lib/supabase";
-import { scheduleLeadNotification } from "@/lib/notification-scheduler";
+import { notificationTemplates, showBrowserNotification } from "@/components/notifications/BrowserNotifications";
 
 interface LeadFormProps {
   lead?: Lead | null;
@@ -113,15 +113,38 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) => {
               metadata: { source: formData.source, type: formData.type }
             }]);
 
-          // Schedule notification for new lead
-          await scheduleLeadNotification(newLead.id, {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            company: formData.company,
-            source: formData.source,
-            priority: formData.priority,
-          });
+          // Send notification emails for new lead
+          try {
+            const response = await fetch('/api/notifications', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                type: 'new_lead',
+                leadData: newLead,
+                adminEmail: process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@yourdomain.com'
+              }),
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+              console.log('Notifications sent:', {
+                adminSent: result.adminSent,
+                leadSent: result.leadSent
+              });
+
+              // Show browser notification for admin
+              showBrowserNotification(
+                notificationTemplates.newLead(formData.name, formData.company)
+              );
+            } else {
+              console.error('Failed to send notifications:', result.error);
+            }
+          } catch (error) {
+            console.error('Error sending notifications:', error);
+          }
         }
       }
 

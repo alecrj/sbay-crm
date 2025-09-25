@@ -1,19 +1,51 @@
-// Notification system for email and SMS reminders
-export interface NotificationConfig {
-  email?: {
-    enabled: boolean;
-    provider: 'resend' | 'sendgrid' | 'nodemailer';
-    apiKey?: string;
-    fromEmail: string;
-    fromName: string;
-  };
-  sms?: {
-    enabled: boolean;
-    provider: 'twilio' | 'vonage';
-    apiKey?: string;
-    apiSecret?: string;
-    fromNumber: string;
-  };
+import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
+import { supabase } from './supabase';
+
+// Initialize email providers
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Gmail transporter
+const gmailTransporter = nodemailer.createTransporter({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
+
+// Generic SMTP transporter
+const smtpTransporter = nodemailer.createTransporter({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
+
+export interface NotificationData {
+  type: string;
+  recipientEmail: string;
+  subject: string;
+  content: string;
+  leadId?: string;
+  appointmentId?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface EmailTemplateData {
+  leadName: string;
+  leadEmail: string;
+  leadCompany?: string;
+  leadPhone?: string;
+  propertyInterest?: string;
+  source: string;
+  priority: string;
+  adminName?: string;
+  companyName?: string;
+  appUrl?: string;
 }
 
 export interface EmailTemplate {
@@ -43,372 +75,455 @@ export interface NotificationData {
 }
 
 // Email templates
-export const emailTemplates: Record<string, EmailTemplate> = {
-  appointment_reminder_24h: {
-    subject: 'Appointment Reminder - Tomorrow at {{time}}',
+export const emailTemplates = {
+  newLeadAdmin: (data: EmailTemplateData) => ({
+    subject: `🚨 New Lead Alert: ${data.leadName}${data.leadCompany ? ` from ${data.leadCompany}` : ''}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1f2937;">Appointment Reminder</h2>
-        <p>Hello {{name}},</p>
-        <p>This is a friendly reminder that you have an appointment scheduled for <strong>tomorrow</strong>:</p>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Lead Alert</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #3B82F6, #1E40AF); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+            .content { background: #fff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .lead-info { background: #F8FAFC; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .priority-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+            .urgent { background: #FEE2E2; color: #DC2626; }
+            .high { background: #FEF3C7; color: #D97706; }
+            .medium { background: #FEF9C3; color: #CA8A04; }
+            .low { background: #DCFCE7; color: #16A34A; }
+            .button { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; margin: 20px 0; }
+            .button:hover { background: #2563EB; }
+            .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">🏢 New Lead Alert</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">A new potential client has submitted their information</p>
+            </div>
 
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 10px 0; color: #374151;">{{appointmentTitle}}</h3>
-          <p style="margin: 5px 0;"><strong>Date:</strong> {{appointmentDate}}</p>
-          <p style="margin: 5px 0;"><strong>Time:</strong> {{appointmentTime}}</p>
-          {{#if appointmentLocation}}
-          <p style="margin: 5px 0;"><strong>Location:</strong> {{appointmentLocation}}</p>
-          {{/if}}
-        </div>
+            <div class="content">
+              <div class="lead-info">
+                <h2 style="margin-top: 0; color: #1F2937;">Lead Information</h2>
 
-        <p>Please let us know if you need to reschedule or have any questions.</p>
-        <p>Best regards,<br>Shallow Bay Advisors Team</p>
+                <p><strong>👤 Name:</strong> ${data.leadName}</p>
+                <p><strong>📧 Email:</strong> <a href="mailto:${data.leadEmail}">${data.leadEmail}</a></p>
+                ${data.leadPhone ? `<p><strong>📱 Phone:</strong> <a href="tel:${data.leadPhone}">${data.leadPhone}</a></p>` : ''}
+                ${data.leadCompany ? `<p><strong>🏢 Company:</strong> ${data.leadCompany}</p>` : ''}
 
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        <p style="font-size: 12px; color: #6b7280;">
-          This is an automated reminder. Please do not reply to this email.
-        </p>
-      </div>
+                <p><strong>🎯 Priority:</strong>
+                  <span class="priority-badge ${data.priority}">
+                    ${data.priority}
+                  </span>
+                </p>
+
+                <p><strong>📍 Source:</strong> ${data.source.charAt(0).toUpperCase() + data.source.slice(1).replace('-', ' ')}</p>
+
+                ${data.propertyInterest ? `<p><strong>🏠 Property Interest:</strong> ${data.propertyInterest}</p>` : ''}
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${data.appUrl || 'http://localhost:3002'}/leads" class="button">
+                  View Lead in CRM →
+                </a>
+              </div>
+
+              <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <p style="margin: 0; font-size: 14px; color: #4B5563;">
+                  💡 <strong>Quick Action Tips:</strong><br>
+                  • Respond within 15 minutes for highest conversion rates<br>
+                  • Check their property interest and prepare relevant listings<br>
+                  • Review their source to tailor your approach
+                </p>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>This notification was sent by your Shallow Bay CRM system.</p>
+              <p style="font-size: 12px; color: #9CA3AF;">Generated at ${new Date().toLocaleString()}</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `,
-    text: `
-      Appointment Reminder
+    text: `New Lead Alert: ${data.leadName}
 
-      Hello {{name}},
+Name: ${data.leadName}
+Email: ${data.leadEmail}
+${data.leadPhone ? `Phone: ${data.leadPhone}\n` : ''}${data.leadCompany ? `Company: ${data.leadCompany}\n` : ''}Priority: ${data.priority.toUpperCase()}
+Source: ${data.source.replace('-', ' ')}
+${data.propertyInterest ? `Property Interest: ${data.propertyInterest}\n` : ''}
+View in CRM: ${data.appUrl || 'http://localhost:3002'}/leads
 
-      This is a friendly reminder that you have an appointment scheduled for tomorrow:
+Generated at ${new Date().toLocaleString()}`
+  }),
 
-      {{appointmentTitle}}
-      Date: {{appointmentDate}}
-      Time: {{appointmentTime}}
-      {{#if appointmentLocation}}Location: {{appointmentLocation}}{{/if}}
-
-      Please let us know if you need to reschedule or have any questions.
-
-      Best regards,
-      Shallow Bay Advisors Team
-    `
-  },
-  appointment_reminder_2h: {
-    subject: 'Appointment Starting Soon - {{time}}',
+  newLeadConfirmation: (data: EmailTemplateData) => ({
+    subject: `Thank you for your inquiry - Shallow Bay Advisors`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1f2937;">Appointment Starting Soon</h2>
-        <p>Hello {{name}},</p>
-        <p>Your appointment is starting in <strong>2 hours</strong>:</p>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Thank You for Your Inquiry</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+            .content { background: #fff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .highlight-box { background: #F0FDF4; border: 2px solid #10B981; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0;">🏢 Shallow Bay Advisors</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Commercial Real Estate Excellence</p>
+            </div>
 
-        <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-          <h3 style="margin: 0 0 10px 0; color: #92400e;">{{appointmentTitle}}</h3>
-          <p style="margin: 5px 0;"><strong>Time:</strong> {{appointmentTime}}</p>
-          {{#if appointmentLocation}}
-          <p style="margin: 5px 0;"><strong>Location:</strong> {{appointmentLocation}}</p>
-          {{/if}}
-        </div>
+            <div class="content">
+              <h2 style="color: #1F2937;">Hello ${data.leadName}!</h2>
 
-        <p>We look forward to meeting with you!</p>
-        <p>Best regards,<br>Shallow Bay Advisors Team</p>
+              <p>Thank you for reaching out to <strong>Shallow Bay Advisors</strong>. We've received your inquiry and are excited to help you with your commercial real estate needs.</p>
 
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-        <p style="font-size: 12px; color: #6b7280;">
-          This is an automated reminder. Please do not reply to this email.
-        </p>
-      </div>
+              <div class="highlight-box">
+                <h3 style="margin-top: 0; color: #059669;">✅ What happens next?</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                  <li><strong>Within 24 hours:</strong> One of our experienced advisors will contact you</li>
+                  <li><strong>We'll discuss:</strong> Your specific requirements and objectives</li>
+                  <li><strong>Custom solutions:</strong> Tailored recommendations based on your needs</li>
+                  <li><strong>Next steps:</strong> A clear action plan to move forward</li>
+                </ul>
+              </div>
+
+              ${data.propertyInterest ? `
+                <p><strong>🏠 We noted your interest in:</strong> ${data.propertyInterest}</p>
+                <p>Our team is already preparing relevant market insights and property options that match your criteria.</p>
+              ` : ''}
+
+              <p>In the meantime, feel free to:</p>
+              <ul>
+                <li>📱 Call us directly at <strong>(XXX) XXX-XXXX</strong></li>
+                <li>📧 Reply to this email with any additional questions</li>
+                <li>🌐 Visit our website for more information</li>
+              </ul>
+
+              <div style="background: #F8FAFC; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <p style="margin: 0; font-size: 14px; color: #4B5563; text-align: center;">
+                  <strong>Shallow Bay Advisors</strong><br>
+                  Your trusted partner in commercial real estate<br>
+                  Excellence • Expertise • Results
+                </p>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>This is an automated confirmation. Please do not reply to this email.</p>
+              <p style="font-size: 12px; color: #9CA3AF;">© ${new Date().getFullYear()} Shallow Bay Advisors. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
     `,
-    text: `
-      Appointment Starting Soon
+    text: `Thank you for your inquiry - Shallow Bay Advisors
 
-      Hello {{name}},
+Hello ${data.leadName}!
 
-      Your appointment is starting in 2 hours:
+Thank you for reaching out to Shallow Bay Advisors. We've received your inquiry and are excited to help you with your commercial real estate needs.
 
-      {{appointmentTitle}}
-      Time: {{appointmentTime}}
-      {{#if appointmentLocation}}Location: {{appointmentLocation}}{{/if}}
+What happens next?
+• Within 24 hours: One of our experienced advisors will contact you
+• We'll discuss: Your specific requirements and objectives
+• Custom solutions: Tailored recommendations based on your needs
+• Next steps: A clear action plan to move forward
 
-      We look forward to meeting with you!
+${data.propertyInterest ? `We noted your interest in: ${data.propertyInterest}\nOur team is already preparing relevant market insights and property options that match your criteria.\n\n` : ''}In the meantime, feel free to:
+• Call us directly at (XXX) XXX-XXXX
+• Reply to this email with any additional questions
+• Visit our website for more information
 
-      Best regards,
-      Shallow Bay Advisors Team
-    `
-  },
-  new_lead_notification: {
-    subject: 'New Lead: {{leadName}}',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #1f2937;">New Lead Received</h2>
-        <p>A new lead has been submitted:</p>
+Shallow Bay Advisors
+Your trusted partner in commercial real estate
+Excellence • Expertise • Results
 
-        <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3b82f6;">
-          <h3 style="margin: 0 0 10px 0; color: #1e40af;">{{leadName}}</h3>
-          <p style="margin: 5px 0;"><strong>Email:</strong> {{email}}</p>
-          {{#if phone}}<p style="margin: 5px 0;"><strong>Phone:</strong> {{phone}}</p>{{/if}}
-          {{#if company}}<p style="margin: 5px 0;"><strong>Company:</strong> {{company}}</p>{{/if}}
-          <p style="margin: 5px 0;"><strong>Source:</strong> {{source}}</p>
-          <p style="margin: 5px 0;"><strong>Priority:</strong> {{priority}}</p>
-        </div>
-
-        <p>Please follow up with this lead as soon as possible.</p>
-
-        <a href="{{crmUrl}}/leads" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0;">
-          View in CRM
-        </a>
-      </div>
-    `,
-    text: `
-      New Lead Received
-
-      A new lead has been submitted:
-
-      Name: {{leadName}}
-      Email: {{email}}
-      {{#if phone}}Phone: {{phone}}{{/if}}
-      {{#if company}}Company: {{company}}{{/if}}
-      Source: {{source}}
-      Priority: {{priority}}
-
-      Please follow up with this lead as soon as possible.
-
-      View in CRM: {{crmUrl}}/leads
-    `
-  }
+This is an automated confirmation. Please do not reply to this email.
+© ${new Date().getFullYear()} Shallow Bay Advisors. All rights reserved.`
+  })
 };
 
-// SMS templates
-export const smsTemplates: Record<string, string> = {
-  appointment_reminder_24h: `Hi {{name}}, reminder: You have an appointment tomorrow at {{appointmentTime}} - {{appointmentTitle}}. {{#if appointmentLocation}}Location: {{appointmentLocation}}{{/if}} Questions? Reply STOP to opt out.`,
-  appointment_reminder_2h: `Hi {{name}}, your appointment "{{appointmentTitle}}" starts in 2 hours at {{appointmentTime}}. {{#if appointmentLocation}}Location: {{appointmentLocation}}{{/if}} See you soon!`,
-};
+export class NotificationService {
+  /**
+   * Create a notification record in the database
+   */
+  static async createNotification(data: NotificationData): Promise<string> {
+    const { data: notification, error } = await supabase
+      .from('notifications')
+      .insert([{
+        type: data.type,
+        recipient_email: data.recipientEmail,
+        subject: data.subject,
+        content: data.content,
+        lead_id: data.leadId,
+        appointment_id: data.appointmentId,
+        metadata: data.metadata || {}
+      }])
+      .select('id')
+      .single();
 
-// Template rendering function
-export const renderTemplate = (template: string, data: Record<string, any>): string => {
-  let rendered = template;
-
-  // Simple handlebars-like templating
-  Object.keys(data).forEach(key => {
-    const value = data[key];
-    if (value !== undefined && value !== null) {
-      // Replace {{key}} with value
-      rendered = rendered.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
-
-      // Handle conditional blocks {{#if key}}...{{/if}}
-      const ifRegex = new RegExp(`{{#if ${key}}}(.*?){{/if}}`, 'gs');
-      rendered = rendered.replace(ifRegex, value ? '$1' : '');
+    if (error) {
+      console.error('Error creating notification:', error);
+      throw error;
     }
-  });
 
-  // Remove any remaining conditional blocks for falsy values
-  rendered = rendered.replace(/{{#if \w+}}.*?{{\/if}}/gs, '');
-
-  // Remove any remaining unused placeholders
-  rendered = rendered.replace(/{{.*?}}/g, '');
-
-  return rendered;
-};
-
-// Email sending function (using Resend as default)
-export const sendEmail = async (
-  to: string,
-  subject: string,
-  html: string,
-  text: string,
-  config: NotificationConfig['email']
-): Promise<boolean> => {
-  if (!config?.enabled || !config.apiKey) {
-    console.log('Email notifications disabled or not configured');
-    return false;
+    return notification.id;
   }
 
-  try {
-    switch (config.provider) {
-      case 'resend':
-        return await sendWithResend(to, subject, html, text, config);
-      case 'sendgrid':
-        return await sendWithSendgrid(to, subject, html, text, config);
-      case 'nodemailer':
-        return await sendWithNodemailer(to, subject, html, text, config);
-      default:
-        console.error('Unknown email provider:', config.provider);
-        return false;
-    }
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
-  }
-};
+  /**
+   * Send email notification using configured provider
+   */
+  static async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text: string,
+    notificationId?: string
+  ): Promise<boolean> {
+    const provider = process.env.EMAIL_PROVIDER || 'resend';
+    const fromEmail = process.env.EMAIL_FROM || process.env.GMAIL_USER || 'noreply@yourdomain.com';
 
-// Resend implementation
-const sendWithResend = async (
-  to: string,
-  subject: string,
-  html: string,
-  text: string,
-  config: NotificationConfig['email']
-): Promise<boolean> => {
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config!.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `${config!.fromName} <${config!.fromEmail}>`,
-      to: [to],
-      subject,
-      html,
-      text,
-    }),
-  });
+    try {
+      let result: any;
 
-  return response.ok;
-};
+      switch (provider) {
+        case 'gmail':
+          result = await gmailTransporter.sendMail({
+            from: `"Shallow Bay CRM" <${fromEmail}>`,
+            to,
+            subject,
+            text,
+            html,
+          });
+          break;
 
-// SendGrid implementation
-const sendWithSendgrid = async (
-  to: string,
-  subject: string,
-  html: string,
-  text: string,
-  config: NotificationConfig['email']
-): Promise<boolean> => {
-  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${config!.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }] }],
-      from: { email: config!.fromEmail, name: config!.fromName },
-      subject,
-      content: [
-        { type: 'text/plain', value: text },
-        { type: 'text/html', value: html },
-      ],
-    }),
-  });
+        case 'smtp':
+          result = await smtpTransporter.sendMail({
+            from: `"Shallow Bay CRM" <${fromEmail}>`,
+            to,
+            subject,
+            text,
+            html,
+          });
+          break;
 
-  return response.ok;
-};
+        case 'resend':
+        default:
+          result = await resend.emails.send({
+            from: `Shallow Bay CRM <${fromEmail}>`,
+            to: [to],
+            subject,
+            html,
+            text
+          });
+          break;
+      }
 
-// Nodemailer implementation (requires server-side setup)
-const sendWithNodemailer = async (
-  to: string,
-  subject: string,
-  html: string,
-  text: string,
-  config: NotificationConfig['email']
-): Promise<boolean> => {
-  // This would require setting up nodemailer on the server
-  // For now, return false as it needs more configuration
-  console.log('Nodemailer not implemented yet');
-  return false;
-};
+      // Update notification status to sent
+      if (notificationId) {
+        await supabase
+          .from('notifications')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            metadata: {
+              provider,
+              message_id: result.data?.id || result.messageId,
+              response: result.response
+            }
+          })
+          .eq('id', notificationId);
+      }
 
-// SMS sending function
-export const sendSMS = async (
-  to: string,
-  message: string,
-  config: NotificationConfig['sms']
-): Promise<boolean> => {
-  if (!config?.enabled || !config.apiKey) {
-    console.log('SMS notifications disabled or not configured');
-    return false;
-  }
+      console.log(`Email sent successfully via ${provider}:`, result.data?.id || result.messageId);
+      return true;
 
-  try {
-    switch (config.provider) {
-      case 'twilio':
-        return await sendWithTwilio(to, message, config);
-      case 'vonage':
-        return await sendWithVonage(to, message, config);
-      default:
-        console.error('Unknown SMS provider:', config.provider);
-        return false;
-    }
-  } catch (error) {
-    console.error('Error sending SMS:', error);
-    return false;
-  }
-};
+    } catch (error: any) {
+      console.error(`Error sending email via ${provider}:`, error);
 
-// Twilio implementation
-const sendWithTwilio = async (
-  to: string,
-  message: string,
-  config: NotificationConfig['sms']
-): Promise<boolean> => {
-  const accountSid = config!.apiKey;
-  const authToken = config!.apiSecret;
-  const fromNumber = config!.fromNumber;
+      // Update notification status to failed
+      if (notificationId) {
+        await supabase
+          .from('notifications')
+          .update({
+            status: 'failed',
+            error_message: error.message,
+            retry_count: 1,
+            metadata: { provider, error: error.message }
+          })
+          .eq('id', notificationId);
+      }
 
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      From: fromNumber,
-      To: to,
-      Body: message,
-    }),
-  });
-
-  return response.ok;
-};
-
-// Vonage implementation
-const sendWithVonage = async (
-  to: string,
-  message: string,
-  config: NotificationConfig['sms']
-): Promise<boolean> => {
-  const response = await fetch('https://rest.nexmo.com/sms/json', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: config!.fromNumber,
-      to: to.replace('+', ''),
-      text: message,
-      api_key: config!.apiKey,
-      api_secret: config!.apiSecret,
-    }),
-  });
-
-  return response.ok;
-};
-
-// Main notification function
-export const sendNotification = async (
-  notificationData: NotificationData,
-  config: NotificationConfig
-): Promise<{ emailSent: boolean; smsSent: boolean }> => {
-  const { type, recipient, data } = notificationData;
-
-  let emailSent = false;
-  let smsSent = false;
-
-  // Send email notification
-  if (recipient.email && config.email?.enabled) {
-    const emailTemplate = emailTemplates[type];
-    if (emailTemplate) {
-      const subject = renderTemplate(emailTemplate.subject, data);
-      const html = renderTemplate(emailTemplate.html, data);
-      const text = renderTemplate(emailTemplate.text, data);
-
-      emailSent = await sendEmail(recipient.email, subject, html, text, config.email);
+      return false;
     }
   }
 
-  // Send SMS notification
-  if (recipient.phone && config.sms?.enabled) {
-    const smsTemplate = smsTemplates[type];
-    if (smsTemplate) {
-      const message = renderTemplate(smsTemplate, data);
-      smsSent = await sendSMS(recipient.phone, message, config.sms);
+  /**
+   * Send new lead notification to admin
+   */
+  static async sendNewLeadNotificationToAdmin(leadData: any, adminEmail: string): Promise<boolean> {
+    try {
+      const templateData: EmailTemplateData = {
+        leadName: leadData.name,
+        leadEmail: leadData.email,
+        leadCompany: leadData.company,
+        leadPhone: leadData.phone,
+        propertyInterest: leadData.property_interest,
+        source: leadData.source,
+        priority: leadData.priority,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL
+      };
+
+      const template = emailTemplates.newLeadAdmin(templateData);
+
+      // Create notification record
+      const notificationId = await this.createNotification({
+        type: 'new_lead_admin',
+        recipientEmail: adminEmail,
+        subject: template.subject,
+        content: template.text,
+        leadId: leadData.id
+      });
+
+      // Send email
+      return await this.sendEmail(
+        adminEmail,
+        template.subject,
+        template.html,
+        template.text,
+        notificationId
+      );
+
+    } catch (error) {
+      console.error('Error sending new lead notification to admin:', error);
+      return false;
     }
   }
 
-  return { emailSent, smsSent };
-};
+  /**
+   * Send confirmation email to the lead
+   */
+  static async sendLeadConfirmation(leadData: any): Promise<boolean> {
+    try {
+      const templateData: EmailTemplateData = {
+        leadName: leadData.name,
+        leadEmail: leadData.email,
+        leadCompany: leadData.company,
+        leadPhone: leadData.phone,
+        propertyInterest: leadData.property_interest,
+        source: leadData.source,
+        priority: leadData.priority
+      };
+
+      const template = emailTemplates.newLeadConfirmation(templateData);
+
+      // Create notification record
+      const notificationId = await this.createNotification({
+        type: 'new_lead_confirmation',
+        recipientEmail: leadData.email,
+        subject: template.subject,
+        content: template.text,
+        leadId: leadData.id
+      });
+
+      // Send email
+      return await this.sendEmail(
+        leadData.email,
+        template.subject,
+        template.html,
+        template.text,
+        notificationId
+      );
+
+    } catch (error) {
+      console.error('Error sending lead confirmation:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Send both admin notification and lead confirmation
+   */
+  static async sendNewLeadNotifications(leadData: any, adminEmail: string): Promise<{
+    adminSent: boolean;
+    leadSent: boolean;
+  }> {
+    const [adminSent, leadSent] = await Promise.all([
+      this.sendNewLeadNotificationToAdmin(leadData, adminEmail),
+      this.sendLeadConfirmation(leadData)
+    ]);
+
+    return { adminSent, leadSent };
+  }
+
+  /**
+   * Get notification history for a lead
+   */
+  static async getNotificationsForLead(leadId: string) {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching notifications for lead:', error);
+      throw error;
+    }
+
+    return data;
+  }
+
+  /**
+   * Retry failed notifications
+   */
+  static async retryFailedNotifications(maxRetries: number = 3): Promise<number> {
+    const { data: failedNotifications, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('status', 'failed')
+      .lt('retry_count', maxRetries);
+
+    if (error || !failedNotifications?.length) {
+      return 0;
+    }
+
+    let successCount = 0;
+
+    for (const notification of failedNotifications) {
+      try {
+        const success = await this.sendEmail(
+          notification.recipient_email,
+          notification.subject,
+          notification.content, // Using content as HTML for retries
+          notification.content,
+          notification.id
+        );
+
+        if (success) {
+          successCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to retry notification ${notification.id}:`, error);
+      }
+    }
+
+    return successCount;
+  }
+}
