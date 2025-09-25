@@ -9,9 +9,6 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, userData?: any) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<{ error: any }>;
-  signInWithMicrosoft: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
 }
@@ -58,60 +55,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, userData?: any) => {
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: userData,
-        },
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  };
-
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Error signing out:', error);
+    } else {
+      window.location.href = '/login';
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login?action=reset_password`,
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        }
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
-  };
-
-  const signInWithMicrosoft = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'azure',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-        }
+        redirectTo: `${window.location.origin}/login?type=recovery`,
       });
       return { error };
     } catch (error) {
@@ -124,9 +80,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     signIn,
-    signUp,
-    signInWithGoogle,
-    signInWithMicrosoft,
     signOut,
     resetPassword,
   };

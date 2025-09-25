@@ -6,197 +6,95 @@ import { useUserRole } from '../../../contexts/UserRoleContext';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 
-interface Invitation {
+interface User {
   id: string;
   email: string;
-  role: string;
-  invitation_token: string;
-  invited_at: string;
-  accepted_at?: string;
-  expires_at: string;
-  status: string;
+  created_at: string;
+  last_sign_in_at?: string;
+  user_metadata?: {
+    role?: string;
+  };
 }
 
-export default function InvitationsPage() {
+export default function UserManagementPage() {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const router = useRouter();
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    role: 'user'
+    password: ''
   });
   const [message, setMessage] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [lastInvitedEmail, setLastInvitedEmail] = useState('');
-
-  // Temporarily disable admin check to debug
-  // useEffect(() => {
-  //   if (!roleLoading && !isAdmin) {
-  //     router.push('/');
-  //   }
-  // }, [isAdmin, roleLoading, router]);
 
   useEffect(() => {
-    loadInvitations();
+    if (!roleLoading && !isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, roleLoading, router]);
+
+  useEffect(() => {
+    loadUsers();
   }, []);
 
-  const loadInvitations = async () => {
+  const loadUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('invited_users')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const { data: { users }, error } = await supabase.auth.admin.listUsers();
       if (error) throw error;
-      setInvitations(data || []);
+      setUsers(users || []);
     } catch (error) {
-      console.error('Error loading invitations:', error);
+      console.error('Error loading users:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const sendInvitation = async (e: React.FormEvent) => {
+  const createUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
 
     try {
-      // Use simple invite function
-      const endpoint = '/.netlify/functions/simple-invite';
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          role: formData.role
-        }),
+      const { data, error } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        email_confirm: true,
+        user_metadata: {
+          role: 'user'
+        }
       });
 
-      const data = await response.json();
+      if (error) throw error;
 
-      if (!response.ok) {
-        console.error('Invitation API Error Details:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: data,
-          fullResponse: response
-        });
-        console.error('Error data:', JSON.stringify(data, null, 2));
-        throw new Error(data.error || data.message || `HTTP ${response.status}: Server Error`);
-      }
-
-      setLastInvitedEmail(formData.email);
-      setFormData({ email: '', role: 'user' });
+      setFormData({ email: '', password: '' });
       setShowForm(false);
-      setShowSuccessModal(true);
-      await loadInvitations();
+      setMessage(`✅ User created successfully: ${formData.email}`);
+      await loadUsers();
     } catch (error) {
-      console.error('Error sending invitation:', error);
+      console.error('Error creating user:', error);
       setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
-  const revokeInvitation = async (id: string, email: string) => {
-    if (!confirm(`Are you sure you want to revoke access for ${email}? This will permanently delete their user account.`)) return;
+  const deleteUser = async (userId: string, email: string) => {
+    if (!confirm(`Are you sure you want to delete user ${email}?`)) return;
 
     try {
-      // Use appropriate endpoint based on environment
-      const endpoint = process.env.NODE_ENV === 'development'
-        ? '/api/admin/revoke-user'
-        : '/.netlify/functions/revoke-user';
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          invitationId: id
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}: Server Error`);
-      }
-
-      console.log('Revoke response:', data);
-      await loadInvitations();
-
-      // Show success message
-      alert(`✅ Access revoked for ${email}. ${data.userDeleted ? 'User account deleted.' : 'No user account found.'}`);
-    } catch (error) {
-      console.error('Error revoking invitation:', error);
-      alert(`❌ Error revoking access: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const deleteInvitation = async (id: string, email: string) => {
-    if (!confirm(`Are you sure you want to permanently delete the invitation for ${email}?`)) return;
-
-    try {
-      const { error } = await supabase
-        .from('invited_users')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.auth.admin.deleteUser(userId);
       if (error) throw error;
-      await loadInvitations();
+
+      setMessage(`✅ User deleted: ${email}`);
+      await loadUsers();
     } catch (error) {
-      console.error('Error deleting invitation:', error);
+      console.error('Error deleting user:', error);
+      setMessage(`❌ Error deleting user: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
-  const resendInvitation = async (invitation: Invitation) => {
-    try {
-      // Use simple invite function
-      const endpoint = '/.netlify/functions/simple-invite';
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: invitation.email,
-          role: invitation.role
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}: Server Error`);
-      }
-
-      setLastInvitedEmail(invitation.email);
-      setShowSuccessModal(true);
-    } catch (error) {
-      console.error('Error resending invitation:', error);
-      alert(`❌ Error resending invitation: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Never';
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'expired': return 'bg-red-100 text-red-800';
-      case 'revoked': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
   };
 
   if (loading || roleLoading) {
@@ -210,40 +108,45 @@ export default function InvitationsPage() {
     );
   }
 
-  // Temporarily disable admin check to debug
-  // if (!isAdmin) {
-  //   return null; // Will redirect in useEffect
-  // }
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                User Invitations
+                User Management
               </h1>
               <p className="text-gray-600">
-                Manage who can access your system
+                Manage system users
               </p>
             </div>
             <button
               onClick={() => setShowForm(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
-              + Invite User
+              + Create User
             </button>
           </div>
         </div>
 
-        {/* Invitation Form Modal */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg ${
+            message.includes('✅') ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {message}
+          </div>
+        )}
+
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Invite New User</h2>
+                <h2 className="text-xl font-bold">Create New User</h2>
                 <button
                   onClick={() => {setShowForm(false); setMessage('');}}
                   className="text-gray-400 hover:text-gray-600"
@@ -252,7 +155,7 @@ export default function InvitationsPage() {
                 </button>
               </div>
 
-              <form onSubmit={sendInvitation} className="space-y-4">
+              <form onSubmit={createUser} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Email Address *
@@ -269,17 +172,17 @@ export default function InvitationsPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role *
+                    Password *
                   </label>
-                  <select
+                  <input
+                    type="password"
                     required
-                    value={formData.role}
-                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="user">User (Basic Access)</option>
-                    <option value="admin">Admin (Full Access)</option>
-                  </select>
+                    placeholder="Enter password"
+                    minLength={6}
+                  />
                 </div>
 
                 <div className="flex gap-3 pt-4">
@@ -287,7 +190,7 @@ export default function InvitationsPage() {
                     type="submit"
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
                   >
-                    Send Invitation
+                    Create User
                   </button>
                   <button
                     type="button"
@@ -298,64 +201,31 @@ export default function InvitationsPage() {
                   </button>
                 </div>
               </form>
-
-              {message && (
-                <div className={`mt-4 p-3 rounded-lg text-sm ${
-                  message.includes('invited') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                }`}>
-                  {message}
-                </div>
-              )}
             </div>
           </div>
         )}
 
-        {/* Success Modal */}
-        {showSuccessModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-lg w-full p-6">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-xl font-bold text-gray-900">Invitation sent to {lastInvitedEmail}</h2>
-              </div>
-
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        )}
-
-
-        {/* Invitations Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Current Invitations</h3>
+            <h3 className="text-lg font-medium text-gray-900">System Users</h3>
           </div>
 
-          {invitations.length === 0 ? (
+          {users.length === 0 ? (
             <div className="p-12 text-center">
               <div className="text-gray-400 mb-4">
                 <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No invitations yet</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
               <p className="text-gray-600 mb-6">
-                Invite your team and clients to create accounts.
+                Create your first user to get started.
               </p>
               <button
                 onClick={() => setShowForm(true)}
                 className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
               >
-                Send First Invitation
+                Create First User
               </button>
             </div>
           ) : (
@@ -367,16 +237,10 @@ export default function InvitationsPage() {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
+                      Created
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Invited
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Expires
+                      Last Login
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -384,57 +248,25 @@ export default function InvitationsPage() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {invitations.map((invitation) => (
-                    <tr key={invitation.id}>
+                  {users.map((user) => (
+                    <tr key={user.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {invitation.email}
+                        {user.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        <span className="capitalize">{invitation.role}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invitation.status)}`}>
-                          {invitation.status}
-                        </span>
+                        {formatDate(user.created_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {formatDate(invitation.created_at)}
+                        {formatDate(user.last_sign_in_at)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {formatDate(invitation.expires_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        <div className="flex space-x-2">
-                          {invitation.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => resendInvitation(invitation)}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Resend invitation"
-                              >
-                                Resend
-                              </button>
-                              <span className="text-gray-400">•</span>
-                            </>
-                          )}
-                          {invitation.status === 'accepted' ? (
-                            <button
-                              onClick={() => revokeInvitation(invitation.id, invitation.email)}
-                              className="text-orange-600 hover:text-orange-900"
-                              title="Revoke access and delete user account"
-                            >
-                              Revoke
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => deleteInvitation(invitation.id, invitation.email)}
-                              className="text-red-600 hover:text-red-900"
-                              title="Delete invitation"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => deleteUser(user.id, user.email)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete user"
+                        >
+                          Delete
+                        </button>
                       </td>
                     </tr>
                   ))}

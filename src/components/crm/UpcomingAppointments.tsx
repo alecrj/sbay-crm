@@ -106,7 +106,7 @@ const UpcomingAppointments: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Upcoming Appointments</h3>
         <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
@@ -125,7 +125,7 @@ const UpcomingAppointments: React.FC = () => {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Upcoming Appointments</h3>
           <Link
@@ -137,7 +137,7 @@ const UpcomingAppointments: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {appointments.length === 0 ? (
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -156,8 +156,8 @@ const UpcomingAppointments: React.FC = () => {
             {appointments.map((appointment) => {
               const { dayText, timeText, isToday, isTomorrow } = formatDateTime(appointment.start_time);
               return (
-                <div key={appointment.id} className="flex items-center space-x-4 p-4 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-xs font-medium ${
+                <div key={appointment.id} className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 p-3 sm:p-4 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex flex-col items-center justify-center text-xs font-medium flex-shrink-0 ${
                     isToday ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                     isTomorrow ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
                     'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
@@ -168,12 +168,12 @@ const UpcomingAppointments: React.FC = () => {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">
+                      <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
                         {appointment.title}
                       </h4>
                       {(isToday || isTomorrow) && (
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full self-start sm:self-auto ${
                           isToday ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
                           'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
                         }`}>
@@ -182,24 +182,26 @@ const UpcomingAppointments: React.FC = () => {
                       )}
                     </div>
 
-                    {appointment.lead && (
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          👤 {appointment.lead.name}
-                        </span>
-                        {appointment.lead.company && (
-                          <span className="text-sm text-gray-500 dark:text-gray-500">
-                            • {appointment.lead.company}
+                    <div className="mt-2 space-y-1">
+                      {appointment.lead && (
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+                          <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                            👤 {appointment.lead.name}
                           </span>
-                        )}
-                      </div>
-                    )}
+                          {appointment.lead.company && (
+                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
+                              • {appointment.lead.company}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                    {appointment.location && (
-                      <div className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                        📍 {appointment.location}
-                      </div>
-                    )}
+                      {appointment.location && (
+                        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-500">
+                          📍 {appointment.location}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

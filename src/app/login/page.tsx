@@ -8,42 +8,40 @@ import { supabase } from '../../lib/supabase';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isPasswordSetup, setIsPasswordSetup] = useState(false);
-  const { user, signIn, signUp, resetPassword } = useAuth();
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
+  const { user, signIn, resetPassword } = useAuth();
   const router = useRouter();
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
 
   useEffect(() => {
-    // Check URL parameters for password setup flows FIRST
-    if (searchParams) {
-      const error = searchParams.get('error');
-      const type = searchParams.get('type');
-      const accessToken = searchParams.get('access_token');
-      const refreshToken = searchParams.get('refresh_token');
+    // Check URL parameters and hash for password reset flows
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const hashParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.hash.substring(1)) : null;
 
-      // Handle invitation flows
-      if (type === 'invite' || type === 'signup' || (accessToken && refreshToken)) {
-        setIsPasswordSetup(true);
-        setMessage('Welcome! Please set your password to complete your account setup.');
-        return;
-      }
+    if (urlParams || hashParams) {
+      const type = urlParams?.get('type') || hashParams?.get('type');
+      const error = urlParams?.get('error') || hashParams?.get('error');
+      const accessToken = hashParams?.get('access_token');
+      const refreshToken = hashParams?.get('refresh_token');
 
-      // Handle password reset flows
-      if (type === 'recovery') {
-        setIsPasswordSetup(true);
+      console.log('URL Debug:', { type, error, accessToken: !!accessToken, refreshToken: !!refreshToken });
+
+      // Handle password reset flow - check multiple conditions
+      if (type === 'recovery' || (accessToken && refreshToken && type !== 'signup')) {
+        console.log('Password reset detected - showing reset form');
+        setIsPasswordReset(true);
         setMessage('Please enter your new password.');
         return;
       }
 
-      // Handle expired links
+      // Handle errors
       if (error) {
-        const errorDescription = searchParams.get('error_description');
+        const errorDescription = urlParams?.get('error_description') || hashParams?.get('error_description');
         if (error === 'access_denied' && errorDescription?.includes('expired')) {
-          setMessage('Link has expired. Please request a new invitation or use "Forgot Password".');
+          setMessage('Reset link has expired. Please request a new password reset.');
         } else {
           setMessage('Authentication error. Please try again.');
         }
@@ -51,11 +49,11 @@ export default function LoginPage() {
       }
     }
 
-    // Redirect if already logged in and not setting up password
-    if (user && !isPasswordSetup) {
+    // Redirect if already logged in and not resetting password
+    if (user && !isPasswordReset) {
       router.push('/');
     }
-  }, [user, router, searchParams, isPasswordSetup]);
+  }, [user, router, isPasswordReset]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +69,6 @@ export default function LoginPage() {
     try {
       const { error } = await signIn(email, password);
       if (error) throw error;
-      // Success - AuthContext will handle redirect
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.message?.includes('Invalid login credentials')) {
@@ -83,7 +80,6 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
@@ -135,23 +131,7 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      // Password updated successfully - user will be automatically signed in
       setMessage('Password updated successfully! Redirecting...');
-
-      // Update invitation status to accepted
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          await supabase
-            .from('invited_users')
-            .update({
-              status: 'accepted'
-            })
-            .eq('email', user.email);
-        }
-      } catch (err) {
-        console.error('Error updating invitation status:', err);
-      }
 
       // Small delay then redirect to dashboard
       setTimeout(() => {
@@ -160,64 +140,6 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error('Password update error:', error);
       setMessage(`Error: ${error.message || 'Password update failed'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePasswordSetup = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!password.trim() || !confirmPassword.trim()) {
-      setMessage('Please enter and confirm your password');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setMessage('Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      setMessage('Password must be at least 6 characters');
-      return;
-    }
-
-    setLoading(true);
-    setMessage('');
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
-      });
-
-      if (error) throw error;
-
-      // Password set successfully - user will be automatically signed in
-      setMessage('Account setup complete! Redirecting...');
-
-      // Update invitation status to accepted
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          await supabase
-            .from('invited_users')
-            .update({
-              status: 'accepted'
-            })
-            .eq('email', user.email);
-        }
-      } catch (err) {
-        console.error('Error updating invitation status:', err);
-      }
-
-      // Small delay then redirect to dashboard
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1000);
-    } catch (error: any) {
-      console.error('Password setup error:', error);
-      setMessage(`Error: ${error.message || 'Account setup failed'}`);
     } finally {
       setLoading(false);
     }
@@ -235,16 +157,16 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-white">
-            {isPasswordSetup ? 'Set Your Password' : 'Welcome Back'}
+            {isPasswordReset ? 'Set New Password' : 'Welcome Back'}
           </h2>
           <p className="mt-2 text-blue-200">
-            {isPasswordSetup ? 'Create your password to continue' : 'Sign in to your CRM dashboard'}
+            {isPasswordReset ? 'Create your new password' : 'Sign in to your CRM dashboard'}
           </p>
         </div>
 
         <div className="bg-white/10 backdrop-blur-sm p-8 rounded-2xl border border-white/20 shadow-xl space-y-6">
-          <form onSubmit={isPasswordSetup ? handlePasswordSetup : handleLogin} className="space-y-6">
-            {!isPasswordSetup && (
+          <form onSubmit={isPasswordReset ? handlePasswordReset : handleLogin} className="space-y-6">
+            {!isPasswordReset && (
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
                   Email Address
@@ -262,7 +184,7 @@ export default function LoginPage() {
 
             <div>
               <label className="block text-sm font-medium text-white mb-2">
-                Password
+                {isPasswordReset ? 'New Password' : 'Password'}
               </label>
               <div className="relative">
                 <input
@@ -271,8 +193,8 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500 pr-12"
-                  placeholder={isPasswordSetup ? "Create a secure password" : "Enter your password"}
-                  minLength={isPasswordSetup ? 6 : undefined}
+                  placeholder={isPasswordReset ? "Enter your new password" : "Enter your password"}
+                  minLength={isPasswordReset ? 6 : undefined}
                 />
                 <button
                   type="button"
@@ -293,10 +215,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {isPasswordSetup && (
+            {isPasswordReset && (
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Confirm Password
+                  Confirm New Password
                 </label>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -304,7 +226,7 @@ export default function LoginPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-white/90 backdrop-blur-sm border border-white/30 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
-                  placeholder="Confirm your password"
+                  placeholder="Confirm your new password"
                   minLength={6}
                 />
               </div>
@@ -318,18 +240,18 @@ export default function LoginPage() {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  {isPasswordSetup ? 'Setting Password...' : 'Signing In...'}
+                  {isPasswordReset ? 'Setting Password...' : 'Signing In...'}
                 </div>
               ) : (
-                isPasswordSetup ? 'Set Password' : 'Sign In'
+                isPasswordReset ? 'Set Password' : 'Sign In'
               )}
             </button>
           </form>
 
-          {!isPasswordSetup && (
+          {!isPasswordReset && (
             <div className="flex items-center justify-between text-sm">
               <div className="text-blue-300/70 text-xs">
-                Invitation-only access
+                Secure authentication
               </div>
               <button
                 onClick={handleForgotPassword}
@@ -342,7 +264,7 @@ export default function LoginPage() {
           )}
 
           {message && (
-            <div className={`p-4 rounded-xl ${message.includes('Error') || message.includes('Invalid') ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 'bg-green-500/20 text-green-200 border border-green-500/30'}`}>
+            <div className={`p-4 rounded-xl ${message.includes('Error') || message.includes('Invalid') || message.includes('expired') ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 'bg-green-500/20 text-green-200 border border-green-500/30'}`}>
               <p className="text-sm">{message}</p>
             </div>
           )}

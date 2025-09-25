@@ -152,39 +152,40 @@ const LeadKanban: React.FC = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               Lead Pipeline
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
               {isAdmin ? "Track and manage your sales leads through the pipeline" : "View sales leads and their current status"}
             </p>
           </div>
           {isAdmin && (
             <button
               onClick={handleAddLead}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-3 sm:px-4 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>
-              Add New Lead
+              <span className="hidden sm:inline">Add New Lead</span>
+              <span className="sm:hidden">Add Lead</span>
             </button>
           )}
         </div>
 
         {/* Search */}
-        <div className="max-w-md">
+        <div className="w-full sm:max-w-md">
           <input
             type="text"
             placeholder="Search leads..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           />
         </div>
 
         {/* Kanban Board */}
-        <div className="flex space-x-6 overflow-x-auto pb-6">
+        <div className="flex space-x-3 sm:space-x-6 overflow-x-auto pb-6 -mx-3 px-3 sm:mx-0 sm:px-0">
           {LEAD_STATUSES.map((status) => (
             <KanbanColumn
               key={status.id}
@@ -247,25 +248,25 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   return (
     <div
       ref={drop}
-      className={`flex-shrink-0 w-80 bg-gray-50 dark:bg-gray-900 rounded-lg p-4 ${
+      className={`flex-shrink-0 w-72 sm:w-80 bg-gray-50 dark:bg-gray-900 rounded-lg p-3 sm:p-4 ${
         isOver ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
       }`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full ${status.color}`}></div>
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+          <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${status.color}`}></div>
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">
             {status.title}
           </h3>
-          <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-2 py-1 rounded-full">
+          <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full flex-shrink-0">
             {leads.length}
           </span>
         </div>
       </div>
 
       {/* Lead Cards */}
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
         {leads.map((lead) => (
           <DraggableLeadCard
             key={lead.id}
@@ -277,7 +278,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         ))}
 
         {leads.length === 0 && (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
             No leads in this stage
           </div>
         )}

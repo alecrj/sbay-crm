@@ -37,28 +37,45 @@ exports.handler = async (event, context) => {
 
   try {
     const supabaseAdmin = createSupabaseAdmin();
-    const { email, role } = JSON.parse(event.body);
+    const { email, password } = JSON.parse(event.body);
 
-    if (!email || !role) {
+    if (!email || !password) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Email and role are required' })
+        body: JSON.stringify({ error: 'Email and password are required' })
       };
     }
 
-    console.log(`Inviting user: ${email} with role: ${role}`);
+    console.log(`Setting password for user: ${email}`);
 
-    // Simple approach: Just invite the user with Supabase
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://sbaycrm.netlify.app'}/accept-invite`,
-      data: {
-        role: role
-      }
+    // Find the user first
+    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    if (listError) {
+      console.error('List users error:', listError);
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: listError.message })
+      };
+    }
+
+    const user = users.users.find(u => u.email === email);
+    if (!user) {
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'User not found' })
+      };
+    }
+
+    // Update the user's password
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      password: password
     });
 
     if (error) {
-      console.error('Invitation error:', error);
+      console.error('Password update error:', error);
       return {
         statusCode: 400,
         headers,
@@ -66,14 +83,14 @@ exports.handler = async (event, context) => {
       };
     }
 
-    console.log('Invitation sent successfully');
+    console.log('Password set successfully');
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        message: `Invitation sent to ${email}`
+        message: `Password set for ${email}`
       })
     };
 

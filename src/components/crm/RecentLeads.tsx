@@ -157,57 +157,58 @@ const RecentLeads: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {leads.map((lead) => (
-              <div key={lead.id} className="flex items-center justify-between p-4 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <div className="flex items-center space-x-4 flex-1">
-                  <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 dark:text-blue-400 font-medium text-sm">
+              <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors space-y-2 sm:space-y-0">
+                <div className="flex items-start space-x-3 flex-1 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-blue-600 dark:text-blue-400 font-medium text-xs sm:text-sm">
                       {lead.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-medium text-gray-900 dark:text-white truncate">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-1">
+                      <h4 className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
                         {lead.name}
                       </h4>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(lead.status)}`}>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(lead.status)} mt-1 sm:mt-0 self-start sm:self-auto`}>
                         {lead.status.replace('-', ' ')}
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-4 mt-1">
-                      <span className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                    <div className="space-y-1 min-w-0">
+                      <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 break-all">
                         {lead.email}
-                      </span>
+                      </div>
                       {lead.company && (
-                        <span className="text-sm text-gray-500 dark:text-gray-500 truncate">
-                          {lead.company}
-                        </span>
+                        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-500 truncate">
+                          🏢 {lead.company}
+                        </div>
+                      )}
+                      {lead.property_interest && (
+                        <div className="text-xs text-gray-500 dark:text-gray-500 truncate">
+                          🏠 {lead.property_interest}
+                        </div>
                       )}
                     </div>
-
-                    {lead.property_interest && (
-                      <div className="text-xs text-gray-500 dark:text-gray-500 mt-1 truncate">
-                        🏢 {lead.property_interest}
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3 text-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-3 text-xs sm:text-sm">
                   <div className="flex items-center space-x-1">
-                    <span className="text-lg">{getSourceIcon(lead.source)}</span>
-                    <span className="hidden sm:inline text-gray-500 dark:text-gray-400 capitalize">
+                    <span className="text-base sm:text-lg">{getSourceIcon(lead.source)}</span>
+                    <span className="hidden md:inline text-gray-500 dark:text-gray-400 capitalize">
                       {lead.source.replace('-', ' ')}
                     </span>
                   </div>
 
-                  <div className={`font-medium ${getPriorityColor(lead.priority)}`}>
-                    {lead.priority.toUpperCase()}
-                  </div>
+                  <div className="flex items-center justify-between sm:contents">
+                    <div className={`font-medium ${getPriorityColor(lead.priority)}`}>
+                      {lead.priority.toUpperCase()}
+                    </div>
 
-                  <div className="text-gray-400 dark:text-gray-500 text-xs">
-                    {formatDate(lead.created_at)}
+                    <div className="text-gray-400 dark:text-gray-500">
+                      {formatDate(lead.created_at)}
+                    </div>
                   </div>
                 </div>
               </div>

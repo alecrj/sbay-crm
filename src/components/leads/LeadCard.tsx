@@ -67,28 +67,30 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, priorityColor, isAdmi
       className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-shadow duration-200 border-l-4 ${priorityColor} ${isAdmin ? 'hover:shadow-md cursor-pointer' : 'cursor-default'}`}
       onClick={isAdmin ? () => onEdit(lead) : undefined}
     >
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            <span className="text-lg">{getTypeIcon(lead.type)}</span>
-            <h4 className="font-semibold text-gray-900 dark:text-white text-sm truncate">
+        <div className="flex items-start justify-between mb-2 sm:mb-3">
+          <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
+            <span className="text-sm sm:text-lg flex-shrink-0">{getTypeIcon(lead.type)}</span>
+            <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm truncate">
               {lead.name}
             </h4>
           </div>
-          {getPriorityBadge(lead.priority)}
+          <div className="ml-2 flex-shrink-0">
+            {getPriorityBadge(lead.priority)}
+          </div>
         </div>
 
         {/* Company */}
         {lead.company && (
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 font-medium">
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 font-medium truncate">
             {lead.company}
           </p>
         )}
 
         {/* Contact Info */}
-        <div className="space-y-1 mb-3">
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+        <div className="space-y-1 mb-2 sm:mb-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400 break-all">
             📧 {lead.email}
           </p>
           {lead.phone && (

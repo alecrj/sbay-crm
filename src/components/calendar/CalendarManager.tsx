@@ -191,43 +191,55 @@ const CalendarManager: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-8">
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+    <div className="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-3 sm:p-6 lg:p-8">
+      <div className="mb-4 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">
               Calendar & Appointments
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
               Manage your appointments and schedule meetings
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500">
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
               Confirmed
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500">
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-amber-500 rounded-full"></div>
               Pending
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-500">
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
               Cancelled
             </div>
           </div>
         </div>
       </div>
 
-      <div className="calendar-container bg-gray-50 dark:bg-gray-900/30 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/50">
+      <div className="calendar-container bg-gray-50 dark:bg-gray-900/30 rounded-lg sm:rounded-xl p-2 sm:p-4 border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
         <style jsx global>{`
           .fc-toolbar {
-            margin-bottom: 1.5rem !important;
+            margin-bottom: 1rem !important;
+            flex-wrap: wrap !important;
+            gap: 0.5rem !important;
           }
           .fc-toolbar-title {
-            font-size: 1.5rem !important;
+            font-size: 1.125rem !important;
             font-weight: 700 !important;
             color: rgb(17 24 39) !important;
+            margin: 0 !important;
+          }
+          @media (min-width: 640px) {
+            .fc-toolbar {
+              margin-bottom: 1.5rem !important;
+              flex-wrap: nowrap !important;
+            }
+            .fc-toolbar-title {
+              font-size: 1.5rem !important;
+            }
           }
           .dark .fc-toolbar-title {
             color: rgb(255 255 255) !important;
@@ -235,10 +247,18 @@ const CalendarManager: React.FC = () => {
           .fc-button {
             background: rgb(59 130 246) !important;
             border: none !important;
-            border-radius: 0.5rem !important;
-            padding: 0.5rem 1rem !important;
+            border-radius: 0.375rem !important;
+            padding: 0.25rem 0.5rem !important;
             font-weight: 500 !important;
+            font-size: 0.75rem !important;
             transition: all 0.2s ease !important;
+          }
+          @media (min-width: 640px) {
+            .fc-button {
+              border-radius: 0.5rem !important;
+              padding: 0.5rem 1rem !important;
+              font-size: 0.875rem !important;
+            }
           }
           .fc-button:hover {
             background: rgb(37 99 235) !important;
@@ -288,31 +308,48 @@ const CalendarManager: React.FC = () => {
             color: rgb(255 255 255) !important;
           }
           .fc-scrollgrid {
-            border-radius: 0.75rem !important;
+            border-radius: 0.5rem !important;
             overflow: hidden !important;
+          }
+          @media (min-width: 640px) {
+            .fc-scrollgrid {
+              border-radius: 0.75rem !important;
+            }
+          }
+          .fc-daygrid-event {
+            font-size: 0.75rem !important;
+            margin: 0.125rem 0 !important;
+          }
+          @media (min-width: 640px) {
+            .fc-daygrid-event {
+              font-size: 0.875rem !important;
+              margin: 0.25rem 0 !important;
+            }
           }
         `}</style>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
           headerToolbar={{
-            left: 'prev,next today',
+            left: 'prev,next',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+            right: 'dayGridMonth,listWeek'
           }}
           initialView="dayGridMonth"
           editable={true}
           selectable={true}
           selectMirror={true}
-          dayMaxEvents={true}
+          dayMaxEvents={window.innerWidth >= 640 ? true : 2}
+          moreLinkClick="popover"
           weekends={true}
           events={events}
           select={handleDateSelect}
           eventClick={handleEventClick}
           height="auto"
+          aspectRatio={window.innerWidth >= 768 ? 1.35 : 0.8}
           eventTimeFormat={{
             hour: 'numeric',
             minute: '2-digit',
-            meridiem: 'short'
+            meridiem: window.innerWidth >= 640 ? 'short' : false
           }}
           slotMinTime="08:00:00"
           slotMaxTime="19:00:00"
@@ -322,6 +359,8 @@ const CalendarManager: React.FC = () => {
             endTime: '17:00',
           }}
           eventClassNames="cursor-pointer"
+          nowIndicator={true}
+          dayHeaderFormat={window.innerWidth >= 640 ? { weekday: 'short', day: 'numeric', omitCommas: true } : { weekday: 'narrow' }}
         />
       </div>
 

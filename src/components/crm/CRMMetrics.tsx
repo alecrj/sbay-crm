@@ -126,10 +126,12 @@ const CRMMetrics: React.FC = () => {
     };
 
     return (
-      <div className={`${bgClasses[color]} border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 p-6 group hover:scale-[1.02]`}>
-        <div className="flex items-center justify-between mb-6">
-          <div className={`w-14 h-14 ${colorClasses[color]} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:shadow-xl transition-shadow duration-200`}>
-            {icon}
+      <div className={`${bgClasses[color]} border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 p-4 sm:p-6 group hover:scale-[1.02]`}>
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className={`w-10 h-10 sm:w-14 sm:h-14 ${colorClasses[color]} rounded-xl flex items-center justify-center text-white shadow-lg group-hover:shadow-xl transition-shadow duration-200`}>
+            <div className="w-4 h-4 sm:w-6 sm:h-6">
+              {icon}
+            </div>
           </div>
           {trend && (
             <div className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${
@@ -147,21 +149,21 @@ const CRMMetrics: React.FC = () => {
           )}
         </div>
         <div className="space-y-1">
-          <h3 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
+          <h3 className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
             {isLoading ? (
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
             ) : (
               value
             )}
           </h3>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
+          <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{title}</p>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
       <MetricCard
         title="Total Leads"
         value={stats.totalLeads}
