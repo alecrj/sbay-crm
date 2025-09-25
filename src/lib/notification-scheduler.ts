@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { sendNotification, NotificationConfig, NotificationData } from './notifications';
+import { NotificationService, NotificationData, NotificationConfig } from './notifications';
 
 // Notification queue item
 export interface NotificationQueueItem {
@@ -228,9 +228,7 @@ export const scheduleLeadNotification = async (
 };
 
 // Process pending notifications (this would be called by a cron job or background worker)
-export const processPendingNotifications = async (
-  config: NotificationConfig
-): Promise<void> => {
+export const processPendingNotifications = async (config?: NotificationConfig): Promise<void> => {
   try {
     const now = new Date().toISOString();
 
@@ -268,21 +266,19 @@ export const processPendingNotifications = async (
           .eq('id', notification.id);
 
         // Send the notification
-        const notificationData: NotificationData = {
+        const notificationService = new NotificationService();
+
+        const result = await notificationService.sendNotification({
           type: notification.type as any,
-          recipient: {
+          data: {
+            ...notification.data,
             name: notification.recipient_name,
             email: notification.recipient_email,
-            phone: notification.recipient_phone,
-          },
-          data: notification.data,
-          reminderType: notification.reminder_type as any,
-        };
-
-        const result = await sendNotification(notificationData, config);
+          }
+        });
 
         // Update status based on result
-        if (result.emailSent || result.smsSent) {
+        if (result.success) {
           await supabase
             .from('notification_queue')
             .update({
@@ -293,7 +289,7 @@ export const processPendingNotifications = async (
 
           console.log(`Successfully sent notification ${notification.id}`);
         } else {
-          const errorMessage = 'Failed to send notification';
+          const errorMessage = result.error || 'Failed to send notification';
           await supabase
             .from('notification_queue')
             .update({

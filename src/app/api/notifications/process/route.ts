@@ -3,6 +3,9 @@ import { processPendingNotifications } from '@/lib/notification-scheduler';
 import { supabase } from '@/lib/supabase';
 import { NotificationConfig } from '@/lib/notifications';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Check for API key (optional security measure)

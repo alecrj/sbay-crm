@@ -1,29 +1,66 @@
-import { Resend } from 'resend';
 import nodemailer from 'nodemailer';
 import { supabase } from './supabase';
 
-// Initialize email providers
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Dynamic import of Resend to avoid build-time issues
+let Resend: any = null;
+let resend: any = null;
 
-// Gmail transporter
-const gmailTransporter = nodemailer.createTransporter({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+const getResend = async () => {
+  // Only initialize when actually needed (not during build)
+  if (!resend && process.env.RESEND_API_KEY) {
+    try {
+      // Dynamically import Resend only when needed
+      if (!Resend) {
+        const { Resend: ResendClass } = await import('resend');
+        Resend = ResendClass;
+      }
 
-// Generic SMTP transporter
-const smtpTransporter = nodemailer.createTransporter({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+      // Double-check we have a valid API key format
+      if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.length > 0) {
+        resend = new Resend(process.env.RESEND_API_KEY);
+      } else {
+        console.warn('Resend API key is not configured');
+        return null;
+      }
+    } catch (error) {
+      console.warn('Failed to initialize Resend:', error);
+      return null;
+    }
+  }
+  return resend;
+};
+
+// Gmail transporter (lazy initialization)
+let gmailTransporter: nodemailer.Transporter | null = null;
+const getGmailTransporter = () => {
+  if (!gmailTransporter && process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    gmailTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+  return gmailTransporter;
+};
+
+// Generic SMTP transporter (lazy initialization)
+let smtpTransporter: nodemailer.Transporter | null = null;
+const getSmtpTransporter = () => {
+  if (!smtpTransporter && process.env.SMTP_HOST) {
+    smtpTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+  return smtpTransporter;
+};
 
 export interface NotificationData {
   type: string;
@@ -52,6 +89,23 @@ export interface EmailTemplate {
   subject: string;
   html: string;
   text: string;
+}
+
+export interface NotificationConfig {
+  email?: {
+    enabled: boolean;
+    provider: 'resend' | 'gmail' | 'smtp';
+    fromEmail: string;
+    fromName: string;
+    apiKey?: string;
+  };
+  sms?: {
+    enabled: boolean;
+    provider: 'twilio';
+    fromNumber: string;
+    apiKey?: string;
+    apiSecret?: string;
+  };
 }
 
 export interface NotificationData {
@@ -304,7 +358,11 @@ export class NotificationService {
 
       switch (provider) {
         case 'gmail':
-          result = await gmailTransporter.sendMail({
+          const gmailTransporterInstance = getGmailTransporter();
+          if (!gmailTransporterInstance) {
+            throw new Error('Gmail credentials not configured');
+          }
+          result = await gmailTransporterInstance.sendMail({
             from: `"Shallow Bay CRM" <${fromEmail}>`,
             to,
             subject,
@@ -314,7 +372,11 @@ export class NotificationService {
           break;
 
         case 'smtp':
-          result = await smtpTransporter.sendMail({
+          const smtpTransporterInstance = getSmtpTransporter();
+          if (!smtpTransporterInstance) {
+            throw new Error('SMTP configuration not available');
+          }
+          result = await smtpTransporterInstance.sendMail({
             from: `"Shallow Bay CRM" <${fromEmail}>`,
             to,
             subject,
@@ -325,7 +387,14 @@ export class NotificationService {
 
         case 'resend':
         default:
-          result = await resend.emails.send({
+          if (!process.env.RESEND_API_KEY) {
+            throw new Error('Resend API key not configured. Please set RESEND_API_KEY environment variable.');
+          }
+          const resendInstance = await getResend();
+          if (!resendInstance) {
+            throw new Error('Failed to initialize Resend. Please check your API key.');
+          }
+          result = await resendInstance.emails.send({
             from: `Shallow Bay CRM <${fromEmail}>`,
             to: [to],
             subject,
@@ -525,5 +594,203 @@ export class NotificationService {
     }
 
     return successCount;
+  }
+
+  /**
+   * Send notification based on type and data (used by notification scheduler)
+   */
+  async sendNotification(params: {
+    type: string;
+    data: {
+      name: string;
+      email?: string;
+      [key: string]: any;
+    };
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { type, data } = params;
+
+      switch (type) {
+        case 'appointment_reminder_24h':
+        case 'appointment_reminder_2h':
+          return await this.sendAppointmentReminder(data, type);
+
+        case 'new_lead_notification':
+          if (!data.email) {
+            return { success: false, error: 'No email provided for lead notification' };
+          }
+          const success = await NotificationService.sendNewLeadNotificationToAdmin(data, data.email);
+          return { success, error: success ? undefined : 'Failed to send lead notification' };
+
+        case 'property_alert':
+          return await this.sendPropertyAlert(data);
+
+        default:
+          return { success: false, error: `Unknown notification type: ${type}` };
+      }
+    } catch (error) {
+      console.error('Error in sendNotification:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Send appointment reminder
+   */
+  private async sendAppointmentReminder(data: any, type: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const reminderType = type.includes('24h') ? '24-hour' : '2-hour';
+      const subject = `🗓️ Appointment Reminder - ${data.appointmentTitle} (${reminderType} notice)`;
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Appointment Reminder</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+              .content { background: #fff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              .appointment-info { background: #F8FAFC; padding: 20px; border-radius: 8px; margin: 20px 0; }
+              .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1 style="margin: 0;">📅 Appointment Reminder</h1>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">${reminderType} notice</p>
+              </div>
+              <div class="content">
+                <h2 style="color: #1F2937;">Hello ${data.name}!</h2>
+                <p>This is a friendly reminder about your upcoming appointment:</p>
+                <div class="appointment-info">
+                  <h3 style="margin-top: 0; color: #7C3AED;">📝 ${data.appointmentTitle}</h3>
+                  <p><strong>📅 Date:</strong> ${data.appointmentDate}</p>
+                  <p><strong>🕒 Time:</strong> ${data.appointmentTime}</p>
+                  ${data.appointmentLocation ? `<p><strong>📍 Location:</strong> ${data.appointmentLocation}</p>` : ''}
+                </div>
+                <p>We look forward to meeting with you!</p>
+              </div>
+              <div class="footer">
+                <p>Shallow Bay Advisors - Your Commercial Real Estate Partner</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const text = `Appointment Reminder - ${reminderType} notice
+
+Hello ${data.name}!
+
+This is a friendly reminder about your upcoming appointment:
+
+${data.appointmentTitle}
+Date: ${data.appointmentDate}
+Time: ${data.appointmentTime}
+${data.appointmentLocation ? `Location: ${data.appointmentLocation}\n` : ''}
+We look forward to meeting with you!
+
+Shallow Bay Advisors - Your Commercial Real Estate Partner`;
+
+      const success = await NotificationService.sendEmail(
+        data.email,
+        subject,
+        html,
+        text
+      );
+
+      return { success, error: success ? undefined : 'Failed to send appointment reminder' };
+    } catch (error) {
+      console.error('Error sending appointment reminder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Send property alert
+   */
+  private async sendPropertyAlert(data: any): Promise<{ success: boolean; error?: string }> {
+    try {
+      const subject = `🏢 Property Alert - ${data.propertyTitle || 'New Property Available'}`;
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Property Alert</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center; }
+              .content { background: #fff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              .property-info { background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #F59E0B; }
+              .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1 style="margin: 0;">🏢 Property Alert</h1>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">New property matching your criteria</p>
+              </div>
+              <div class="content">
+                <h2 style="color: #1F2937;">Hello ${data.name}!</h2>
+                <p>We found a property that matches your search criteria:</p>
+                <div class="property-info">
+                  <h3 style="margin-top: 0; color: #D97706;">${data.propertyTitle || 'Property Available'}</h3>
+                  ${data.propertyAddress ? `<p><strong>📍 Address:</strong> ${data.propertyAddress}</p>` : ''}
+                  ${data.propertySize ? `<p><strong>📏 Size:</strong> ${data.propertySize}</p>` : ''}
+                  ${data.propertyPrice ? `<p><strong>💰 Price:</strong> ${data.propertyPrice}</p>` : ''}
+                </div>
+                <p>Contact us for more details about this property.</p>
+              </div>
+              <div class="footer">
+                <p>Shallow Bay Advisors - Your Commercial Real Estate Partner</p>
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      const text = `Property Alert - New property matching your criteria
+
+Hello ${data.name}!
+
+We found a property that matches your search criteria:
+
+${data.propertyTitle || 'Property Available'}
+${data.propertyAddress ? `Address: ${data.propertyAddress}\n` : ''}${data.propertySize ? `Size: ${data.propertySize}\n` : ''}${data.propertyPrice ? `Price: ${data.propertyPrice}\n` : ''}
+Contact us for more details about this property.
+
+Shallow Bay Advisors - Your Commercial Real Estate Partner`;
+
+      const success = await NotificationService.sendEmail(
+        data.email,
+        subject,
+        html,
+        text
+      );
+
+      return { success, error: success ? undefined : 'Failed to send property alert' };
+    } catch (error) {
+      console.error('Error sending property alert:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 }

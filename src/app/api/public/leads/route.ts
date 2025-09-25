@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { scheduleLeadNotification } from '@/lib/notification-scheduler';
 
 // CORS headers for cross-origin requests from the public website
 const corsHeaders = {
@@ -191,18 +190,30 @@ export async function POST(request: NextRequest) {
         }
       }]);
 
-    // Schedule notification for new lead
+    // Send notification for new lead
     try {
-      await scheduleLeadNotification(newLead.id, {
-        name: leadData.name,
-        email: leadData.email,
-        phone: leadData.phone,
-        company: leadData.company,
-        source: leadData.source,
-        priority: leadData.priority,
+      const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'new_lead',
+          data: {
+            leadId: newLead.id,
+            name: leadData.name,
+            email: leadData.email,
+            phone: leadData.phone,
+            company: leadData.company,
+            source: leadData.source,
+            priority: leadData.priority,
+          }
+        }),
       });
+
+      if (!notificationResponse.ok) {
+        throw new Error(`Notification API returned ${notificationResponse.status}`);
+      }
     } catch (notificationError) {
-      console.error('Failed to schedule notification for new lead:', notificationError);
+      console.error('Failed to send notification for new lead:', notificationError);
       // Don't fail the lead creation for notification errors
     }
 
