@@ -17,7 +17,7 @@ const getResend = () => {
 };
 
 // Gmail transporter
-const gmailTransporter = nodemailer.createTransporter({
+const gmailTransporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.GMAIL_USER,
@@ -26,7 +26,7 @@ const gmailTransporter = nodemailer.createTransporter({
 });
 
 // Generic SMTP transporter
-const smtpTransporter = nodemailer.createTransporter({
+const smtpTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
