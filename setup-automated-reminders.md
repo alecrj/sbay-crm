@@ -24,85 +24,9 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
 ## 3. Cron Job Setup
 
-You need to set up a cron job to call the reminder processing endpoint every 5-15 minutes.
+You need to set up a cron job to call the reminder processing endpoint every 10 minutes.
 
-### Option A: Using Netlify (Recommended for your setup)
-
-Create a file `netlify/functions/scheduled-reminders.js`:
-
-```javascript
-const fetch = require('node-fetch');
-
-exports.handler = async (event, context) => {
-  // Only run for scheduled events
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ message: 'Method not allowed' })
-    };
-  }
-
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/cron/process-reminders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-cron-secret': process.env.CRON_SECRET
-      }
-    });
-
-    const result = await response.json();
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        result: result
-      })
-    };
-  } catch (error) {
-    console.error('Cron job error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        success: false,
-        error: error.message
-      })
-    };
-  }
-};
-```
-
-Then add to your `netlify.toml`:
-
-```toml
-[build]
-  functions = "netlify/functions"
-
-[[plugins]]
-  package = "netlify-plugin-cron"
-
-[plugins.inputs]
-  cron = "*/10 * * * *"  # Every 10 minutes
-  function = "scheduled-reminders"
-```
-
-### Option B: Using Vercel Cron Jobs
-
-If using Vercel, create `vercel.json`:
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/process-reminders",
-      "schedule": "*/10 * * * *"
-    }
-  ]
-}
-```
-
-### Option C: Using External Cron Service (Works with any hosting)
+### Recommended: Using External Cron Service
 
 Use services like:
 - **EasyCron.com** (Free tier available)
