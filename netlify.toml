@@ -11,8 +11,3 @@
   for = "/_next/static/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
-
-# Scheduled function to process reminder notifications every 10 minutes
-[[functions]]
-  schedule = "*/10 * * * *"
-  function = "scheduled-reminders"
