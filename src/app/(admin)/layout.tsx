@@ -46,9 +46,17 @@ export default function AdminLayout({
 
             {/* Mobile Header */}
             <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Shallow Bay CRM
-              </h1>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">ar</span>
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+                    alecrj software
+                  </h1>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 -mt-1">Professional CRM</p>
+                </div>
+              </div>
             </div>
 
             {/* Page Content with mobile bottom padding */}

@@ -8,8 +8,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { UserRoleProvider } from '@/contexts/UserRoleContext';
 
 export const metadata: Metadata = {
-  title: 'Shallow Bay Advisors CRM',
-  description: 'Professional Commercial Real Estate CRM System for Shallow Bay Advisors',
+  title: 'alecrj software | Professional CRM',
+  description: 'Professional CRM System by alecrj software - Custom-built for Commercial Real Estate Management',
 };
 
 const outfit = Outfit({

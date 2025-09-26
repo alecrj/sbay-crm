@@ -320,31 +320,23 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link href="/">
+        <Link href="/" className="flex items-center space-x-2">
           {isExpanded || isHovered || isMobileOpen ? (
             <>
-              <Image
-                className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
-              <Image
-                className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
-                width={150}
-                height={40}
-              />
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">ar</span>
+              </div>
+              <div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">
+                  alecrj software
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 -mt-1">Professional CRM</div>
+              </div>
             </>
           ) : (
-            <Image
-              src="/images/logo/sbalogo.png"
-              alt="Logo"
-              width={32}
-              height={32}
-            />
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">ar</span>
+            </div>
           )}
         </Link>
       </div>
@@ -360,7 +352,7 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "CRM CORE"
+                  "DASHBOARD"
                 ) : (
                   <HorizontaLDots />
                 )}
@@ -377,7 +369,7 @@ const AppSidebar: React.FC = () => {
                 }`}
               >
                 {isExpanded || isHovered || isMobileOpen ? (
-                  "TOOLS & SETTINGS"
+                  "MANAGEMENT"
                 ) : (
                   <HorizontaLDots />
                 )}

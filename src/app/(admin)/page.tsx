@@ -59,8 +59,8 @@ const LeadPipelineSummary = dynamic(() => import("@/components/crm/LeadPipelineS
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard | Shallow Bay Advisors CRM",
-  description: "Commercial Real Estate CRM Dashboard for Shallow Bay Advisors",
+  title: "Dashboard | alecrj software CRM",
+  description: "Professional CRM Dashboard by alecrj software",
 };
 
 export default function CRMDashboard() {
@@ -73,7 +73,7 @@ export default function CRMDashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div className="space-y-2">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-blue-100 text-base sm:text-lg">Welcome back to your CRM</p>
+              <p className="text-blue-100 text-base sm:text-lg">Professional CRM by alecrj software</p>
               <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 text-sm text-blue-200 mt-4 space-y-1 sm:space-y-0">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -206,7 +206,7 @@ export default function CRMDashboard() {
             </div>
             <div>
               <div className="font-semibold text-orange-900 dark:text-orange-100 group-hover:text-orange-700 text-sm sm:text-base">Settings</div>
-              <div className="text-xs sm:text-sm text-orange-600 dark:text-orange-300">Configure CRM</div>
+              <div className="text-xs sm:text-sm text-orange-600 dark:text-orange-300">Configure system</div>
             </div>
           </a>
         </div>
