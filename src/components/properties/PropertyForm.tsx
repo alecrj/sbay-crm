@@ -36,6 +36,9 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
     year_built: new Date().getFullYear(),
   });
 
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [featuredImageIndex, setFeaturedImageIndex] = useState<number>(0);
+
   const [newFeature, setNewFeature] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -43,6 +46,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
 
   useEffect(() => {
     if (property) {
+      const galleryArray = Array.isArray(property.gallery) ? property.gallery : [];
       setFormData({
         title: property.title || "",
         type: property.type || "warehouse",
@@ -54,7 +58,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
         featured: property.featured || false,
         description: property.description || "",
         image: property.image || "",
-        gallery: Array.isArray(property.gallery) ? property.gallery : [],
+        gallery: galleryArray,
         features: Array.isArray(property.features) ? property.features : [],
         street_address: property.street_address || "",
         city: property.city || "",
@@ -66,6 +70,14 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
         parking: property.parking || 0,
         year_built: property.year_built || new Date().getFullYear(),
       });
+
+      // Set gallery images and featured index for existing property
+      setGalleryImages(galleryArray);
+      if (property.image && galleryArray.length > 0) {
+        const featuredIndex = galleryArray.findIndex(img => img === property.image);
+        setFeaturedImageIndex(featuredIndex >= 0 ? featuredIndex : 0);
+      }
+      setImagePreview(property.image || null);
     }
   }, [property]);
 
@@ -77,7 +89,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
       const propertyData = {
         ...formData,
         features: formData.features.filter(f => f.trim() !== ""),
-        gallery: formData.gallery.filter(img => img.trim() !== ""),
+        gallery: galleryImages.filter(img => img.trim() !== ""),
       };
 
       let result;
@@ -144,68 +156,91 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file.');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be less than 5MB.');
-      return;
-    }
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     setUploadingImage(true);
 
     try {
-      // Create a unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `properties/${fileName}`;
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`${file.name} is not an image file`);
+        }
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('property-images')
-        .upload(filePath, file);
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`${file.name} must be less than 5MB`);
+        }
 
-      if (uploadError) {
-        throw uploadError;
+        // Create a unique filename
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `properties/${fileName}`;
+
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(filePath, file);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(filePath);
+
+        return urlData.publicUrl;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+
+      // Add new images to gallery and form data
+      const newGallery = [...galleryImages, ...uploadedUrls];
+      setGalleryImages(newGallery);
+      setFormData(prev => ({ ...prev, gallery: newGallery }));
+
+      // Set first uploaded image as featured if no featured image exists
+      if (galleryImages.length === 0 && uploadedUrls.length > 0) {
+        setFormData(prev => ({ ...prev, image: uploadedUrls[0] }));
+        setImagePreview(uploadedUrls[0]);
+        setFeaturedImageIndex(0);
       }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('property-images')
-        .getPublicUrl(filePath);
-
-      setFormData(prev => ({ ...prev, image: urlData.publicUrl }));
-      setImagePreview(urlData.publicUrl);
     } catch (error: any) {
-      console.error('Error uploading image:', error);
-      alert(`Error uploading image: ${error.message}`);
+      console.error('Error uploading images:', error);
+      alert(`Error uploading images: ${error.message}`);
     } finally {
       setUploadingImage(false);
     }
   };
 
-  const addGalleryImage = () => {
-    if (formData.image && !formData.gallery.includes(formData.image)) {
-      setFormData(prev => ({
-        ...prev,
-        gallery: [...prev.gallery, formData.image]
-      }));
+  const setFeaturedImage = (imageUrl: string, index: number) => {
+    setFormData(prev => ({ ...prev, image: imageUrl }));
+    setImagePreview(imageUrl);
+    setFeaturedImageIndex(index);
+  };
+
+  const removeGalleryImageNew = (index: number) => {
+    const newGallery = galleryImages.filter((_, i) => i !== index);
+    setGalleryImages(newGallery);
+    setFormData(prev => ({ ...prev, gallery: newGallery }));
+
+    // If removed image was featured, set new featured image
+    if (index === featuredImageIndex) {
+      if (newGallery.length > 0) {
+        setFeaturedImage(newGallery[0], 0);
+      } else {
+        setFormData(prev => ({ ...prev, image: '' }));
+        setImagePreview(null);
+        setFeaturedImageIndex(0);
+      }
+    } else if (index < featuredImageIndex) {
+      setFeaturedImageIndex(prev => prev - 1);
     }
   };
 
-  const removeGalleryImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      gallery: prev.gallery.filter((_, i) => i !== index)
-    }));
-  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[75vh]">
@@ -509,41 +544,20 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Main Property Image
+              Upload Property Images
             </label>
             <div className="flex gap-4 items-start">
               <div className="flex-1">
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handleImageUpload}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                   disabled={uploadingImage}
                 />
-                <p className="text-xs text-gray-500 mt-1">Upload an image (max 5MB) or enter URL below</p>
-
-                <input
-                  type="url"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleInputChange}
-                  placeholder="Or paste image URL here"
-                  className="w-full px-4 py-2 mt-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                />
+                <p className="text-xs text-gray-500 mt-1">Upload multiple images (max 5MB each). The first image will be featured by default.</p>
               </div>
-
-              {(formData.image || imagePreview) && (
-                <div className="w-32 h-24 border border-gray-300 rounded-lg overflow-hidden bg-gray-100">
-                  <Image
-                    src={imagePreview || formData.image}
-                    alt="Property preview"
-                    width={128}
-                    height={96}
-                    className="w-full h-full object-cover"
-                    onError={() => setImagePreview(null)}
-                  />
-                </div>
-              )}
             </div>
 
             {uploadingImage && (
@@ -552,52 +566,70 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Uploading image...
+                Uploading images...
               </div>
             )}
           </div>
 
-          {/* Gallery */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Image Gallery
+          {/* Image Gallery with Featured Selection */}
+          {galleryImages.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Image Gallery (Click to set as featured image)
               </label>
-              {formData.image && (
-                <button
-                  type="button"
-                  onClick={addGalleryImage}
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Add main image to gallery
-                </button>
-              )}
-            </div>
-
-            {formData.gallery.length > 0 && (
-              <div className="grid grid-cols-4 gap-2">
-                {formData.gallery.map((imageUrl, index) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {galleryImages.map((imageUrl, index) => (
                   <div key={index} className="relative group">
-                    <div className="w-24 h-18 border border-gray-300 rounded-lg overflow-hidden bg-gray-100">
+                    <div
+                      className={`w-full h-24 border-2 rounded-lg overflow-hidden bg-gray-100 cursor-pointer transition-all ${
+                        index === featuredImageIndex
+                          ? 'border-blue-500 ring-2 ring-blue-200'
+                          : 'border-gray-300 hover:border-gray-400'
+                      }`}
+                      onClick={() => setFeaturedImage(imageUrl, index)}
+                    >
                       <Image
                         src={imageUrl}
                         alt={`Gallery image ${index + 1}`}
-                        width={96}
-                        height={72}
+                        width={120}
+                        height={96}
                         className="w-full h-full object-cover"
                       />
+                      {index === featuredImageIndex && (
+                        <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                          Featured
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"
-                      onClick={() => removeGalleryImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeGalleryImageNew(index);
+                      }}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
                     >
                       ×
                     </button>
                   </div>
                 ))}
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Manual Image URL Input (fallback) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Or add image URL manually
+            </label>
+            <input
+              type="url"
+              name="image"
+              value={formData.image}
+              onChange={handleInputChange}
+              placeholder="Paste image URL here"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            />
           </div>
         </div>
 
