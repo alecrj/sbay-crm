@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
-// Helper function to trigger property sync webhook
-async function triggerPropertySync() {
-  try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    await fetch(`${baseUrl}/api/webhooks/property-sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch (error) {
-    console.error('Failed to trigger property sync:', error);
-    // Don't fail the main operation for webhook errors
-  }
-}
+// Note: Property sync happens automatically via API calls from website
+// No webhook needed - website loads properties directly from CRM API
 
 export async function GET() {
   try {
@@ -65,9 +54,6 @@ export async function POST(request: NextRequest) {
       }, { status: 403 })
     }
 
-    // Trigger website rebuild
-    await triggerPropertySync();
-
     return NextResponse.json({
       success: true,
       property: data[0],
@@ -106,9 +92,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Trigger website rebuild
-    await triggerPropertySync();
-
     return NextResponse.json({
       success: true,
       property: data[0],
@@ -136,9 +119,6 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    // Trigger website rebuild
-    await triggerPropertySync();
 
     return NextResponse.json({
       success: true,
