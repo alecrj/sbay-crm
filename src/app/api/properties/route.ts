@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // Note: Property sync happens automatically via API calls from website
 // No webhook needed - website loads properties directly from CRM API
 
 export async function GET() {
   try {
-    const { data: properties, error } = await supabase
+    const { data: properties, error } = await supabaseAdmin
       .from('properties')
       .select('*')
       .order('created_at', { ascending: false })
@@ -34,9 +34,8 @@ export async function POST(request: NextRequest) {
       id: crypto.randomUUID()
     }
 
-    // For now, we'll use a direct SQL query to bypass RLS
-    // In production, you'd want proper authentication and RLS policies
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS for property creation
+    const { data, error } = await supabaseAdmin
       .from('properties')
       .insert([fullPropertyData])
       .select()
@@ -82,7 +81,7 @@ export async function PUT(request: NextRequest) {
       updated_at: new Date().toISOString()
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('properties')
       .update(updateData)
       .eq('id', id)
@@ -111,7 +110,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Property ID required' }, { status: 400 })
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('properties')
       .delete()
       .eq('id', id)

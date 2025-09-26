@@ -135,6 +135,11 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
       setFormData(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
+
+      // If it's the image field, also update the preview
+      if (name === 'image' && value) {
+        setImagePreview(value);
+      }
     }
   };
 

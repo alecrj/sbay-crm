@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // CORS headers for public API
 const corsHeaders = {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
 
     // Build query
-    let query = supabase
+    let query = supabaseAdmin
       .from('properties')
       .select('*');
 
