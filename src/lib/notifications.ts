@@ -5,12 +5,16 @@ import { supabase } from './supabase';
 // Initialize email providers lazily to avoid build errors
 let resend: Resend | null = null;
 const getResend = () => {
-  if (!resend && process.env.RESEND_API_KEY) {
-    try {
-      resend = new Resend(process.env.RESEND_API_KEY);
-    } catch (error) {
-      console.warn('Failed to initialize Resend:', error);
-      return null;
+  if (!resend) {
+    // Support both RESEND_API_KEY and EMAIL_API_KEY for backward compatibility
+    const apiKey = process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY;
+    if (apiKey && apiKey.startsWith('re_')) {
+      try {
+        resend = new Resend(apiKey);
+      } catch (error) {
+        console.warn('Failed to initialize Resend:', error);
+        return null;
+      }
     }
   }
   return resend;
@@ -65,6 +69,23 @@ export interface EmailTemplate {
   text: string;
 }
 
+export interface NotificationConfig {
+  email?: {
+    enabled: boolean;
+    provider: 'resend' | 'gmail' | 'smtp';
+    fromEmail: string;
+    fromName: string;
+    apiKey?: string;
+  };
+  sms?: {
+    enabled: boolean;
+    provider: 'twilio';
+    fromNumber: string;
+    apiKey?: string;
+    apiSecret?: string;
+  };
+}
+
 export interface NotificationData {
   type: 'appointment_reminder' | 'lead_notification' | 'property_alert';
   recipient: {
@@ -116,7 +137,6 @@ export const emailTemplates = {
           <div class="container">
             <div class="header">
               <h1 style="margin: 0;">🏢 New Lead Alert</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">A new potential client has submitted their information</p>
             </div>
 
             <div class="content">
@@ -144,19 +164,9 @@ export const emailTemplates = {
                   View Lead in CRM →
                 </a>
               </div>
-
-              <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                <p style="margin: 0; font-size: 14px; color: #4B5563;">
-                  💡 <strong>Quick Action Tips:</strong><br>
-                  • Respond within 15 minutes for highest conversion rates<br>
-                  • Check their property interest and prepare relevant listings<br>
-                  • Review their source to tailor your approach
-                </p>
-              </div>
             </div>
 
             <div class="footer">
-              <p>This notification was sent by your Shallow Bay CRM system.</p>
               <p style="font-size: 12px; color: #9CA3AF;">Generated at ${new Date().toLocaleString()}</p>
             </div>
           </div>
@@ -308,7 +318,8 @@ export class NotificationService {
     notificationId?: string
   ): Promise<boolean> {
     const provider = process.env.EMAIL_PROVIDER || 'resend';
-    const fromEmail = process.env.EMAIL_FROM || process.env.GMAIL_USER || 'noreply@yourdomain.com';
+    // Temporarily hardcode working email for testing
+    const fromEmail = 'onboarding@resend.dev';
 
     try {
       let result: any;
@@ -316,7 +327,7 @@ export class NotificationService {
       switch (provider) {
         case 'gmail':
           result = await gmailTransporter.sendMail({
-            from: `"Shallow Bay CRM" <${fromEmail}>`,
+            from: `"Shallow Bay Advisors" <${fromEmail}>`,
             to,
             subject,
             text,
@@ -326,7 +337,7 @@ export class NotificationService {
 
         case 'smtp':
           result = await smtpTransporter.sendMail({
-            from: `"Shallow Bay CRM" <${fromEmail}>`,
+            from: `"Shallow Bay Advisors" <${fromEmail}>`,
             to,
             subject,
             text,
@@ -341,12 +352,13 @@ export class NotificationService {
             throw new Error('Resend not configured or failed to initialize');
           }
           result = await resendInstance.emails.send({
-            from: `Shallow Bay CRM <${fromEmail}>`,
+            from: `Shallow Bay Advisors <${fromEmail}>`,
             to: [to],
             subject,
             html,
             text
           });
+          console.log('Resend full response:', JSON.stringify(result, null, 2));
           break;
       }
 
@@ -407,22 +419,12 @@ export class NotificationService {
 
       const template = emailTemplates.newLeadAdmin(templateData);
 
-      // Create notification record
-      const notificationId = await this.createNotification({
-        type: 'new_lead_admin',
-        recipientEmail: adminEmail,
-        subject: template.subject,
-        content: template.text,
-        leadId: leadData.id
-      });
-
-      // Send email
+      // Send email directly (skip database logging for now)
       return await this.sendEmail(
         adminEmail,
         template.subject,
         template.html,
-        template.text,
-        notificationId
+        template.text
       );
 
     } catch (error) {
@@ -448,22 +450,12 @@ export class NotificationService {
 
       const template = emailTemplates.newLeadConfirmation(templateData);
 
-      // Create notification record
-      const notificationId = await this.createNotification({
-        type: 'new_lead_confirmation',
-        recipientEmail: leadData.email,
-        subject: template.subject,
-        content: template.text,
-        leadId: leadData.id
-      });
-
-      // Send email
+      // Send email directly (skip database logging for now)
       return await this.sendEmail(
         leadData.email,
         template.subject,
         template.html,
-        template.text,
-        notificationId
+        template.text
       );
 
     } catch (error) {
@@ -540,5 +532,109 @@ export class NotificationService {
     }
 
     return successCount;
+  }
+
+  /**
+   * Instance method to send notification (required by notification scheduler)
+   */
+  async sendNotification(data: {
+    type: string;
+    data: {
+      name: string;
+      email?: string;
+      [key: string]: any;
+    };
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { type, data: notificationData } = data;
+
+      // Handle different notification types
+      switch (type) {
+        case 'appointment_reminder_24h':
+        case 'appointment_reminder_2h':
+          return await this.sendAppointmentReminder(notificationData);
+
+        case 'new_lead_notification':
+          if (!notificationData.email) {
+            return { success: false, error: 'No email provided for lead notification' };
+          }
+          const success = await NotificationService.sendNewLeadNotificationToAdmin(
+            notificationData,
+            notificationData.email
+          );
+          return { success };
+
+        default:
+          return { success: false, error: `Unknown notification type: ${type}` };
+      }
+    } catch (error) {
+      console.error('Error in sendNotification:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Send appointment reminder
+   */
+  private async sendAppointmentReminder(data: any): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!data.email) {
+        return { success: false, error: 'No email provided for appointment reminder' };
+      }
+
+      const subject = data.reminderType === '24h'
+        ? `Reminder: ${data.appointmentTitle} tomorrow`
+        : `Reminder: ${data.appointmentTitle} in 2 hours`;
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Appointment Reminder</h2>
+          <p>Hello ${data.name},</p>
+          <p>This is a reminder about your upcoming appointment:</p>
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3>${data.appointmentTitle}</h3>
+            <p><strong>Date:</strong> ${data.appointmentDate}</p>
+            <p><strong>Time:</strong> ${data.appointmentTime}</p>
+            ${data.appointmentLocation ? `<p><strong>Location:</strong> ${data.appointmentLocation}</p>` : ''}
+          </div>
+          <p>We look forward to seeing you!</p>
+          <p>Best regards,<br>Shallow Bay Advisors</p>
+        </div>
+      `;
+
+      const text = `Appointment Reminder
+
+Hello ${data.name},
+
+This is a reminder about your upcoming appointment:
+
+${data.appointmentTitle}
+Date: ${data.appointmentDate}
+Time: ${data.appointmentTime}
+${data.appointmentLocation ? `Location: ${data.appointmentLocation}\n` : ''}
+
+We look forward to seeing you!
+
+Best regards,
+Shallow Bay Advisors`;
+
+      const success = await NotificationService.sendEmail(
+        data.email,
+        subject,
+        html,
+        text
+      );
+
+      return { success };
+    } catch (error) {
+      console.error('Error sending appointment reminder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 }

@@ -286,6 +286,7 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
               <option value="Miami-Dade">Miami-Dade</option>
               <option value="Broward">Broward</option>
               <option value="Palm Beach">Palm Beach</option>
+              <option value="St. Lucie">St. Lucie</option>
             </select>
           </div>
 
