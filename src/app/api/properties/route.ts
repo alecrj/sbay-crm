@@ -53,6 +53,19 @@ export async function POST(request: NextRequest) {
       }, { status: 403 })
     }
 
+    // Trigger website rebuild webhook
+    try {
+      const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;
+      if (webhookUrl) {
+        console.log('Triggering website rebuild...');
+        fetch(webhookUrl, { method: 'POST' }).catch(err =>
+          console.error('Webhook failed:', err)
+        );
+      }
+    } catch (error) {
+      console.error('Webhook error:', error);
+    }
+
     return NextResponse.json({
       success: true,
       property: data[0],
@@ -91,6 +104,19 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Trigger website rebuild webhook
+    try {
+      const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;
+      if (webhookUrl) {
+        console.log('Triggering website rebuild after update...');
+        fetch(webhookUrl, { method: 'POST' }).catch(err =>
+          console.error('Update webhook failed:', err)
+        );
+      }
+    } catch (error) {
+      console.error('Update webhook error:', error);
+    }
+
     return NextResponse.json({
       success: true,
       property: data[0],
@@ -117,6 +143,19 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Trigger website rebuild webhook
+    try {
+      const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;
+      if (webhookUrl) {
+        console.log('Triggering website rebuild after deletion...');
+        fetch(webhookUrl, { method: 'POST' }).catch(err =>
+          console.error('Delete webhook failed:', err)
+        );
+      }
+    } catch (error) {
+      console.error('Delete webhook error:', error);
     }
 
     return NextResponse.json({
