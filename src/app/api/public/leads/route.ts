@@ -258,15 +258,21 @@ export async function POST(request: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'new_lead',
-          data: {
-            leadId: newLead.id,
+          leadData: {
+            id: newLead.id,
             name: leadData.name,
             email: leadData.email,
             phone: leadData.phone,
             company: leadData.company,
+            property_interest: leadData.property_interest,
+            space_requirements: leadData.space_requirements,
+            budget: leadData.budget,
+            timeline: leadData.timeline,
+            message: leadData.message,
             source: leadData.source,
             priority: leadData.priority,
-          }
+          },
+          adminEmail: process.env.ADMIN_EMAIL || '99alecrodriguez@gmail.com'
         }),
       });
 
