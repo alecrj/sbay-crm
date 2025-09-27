@@ -213,28 +213,38 @@ Generated at ${new Date().toLocaleString()}`
             <div class="content">
               <h2 style="color: #1F2937;">Hello ${data.leadName}!</h2>
 
-              <p>Thank you for reaching out to <strong>Shallow Bay Advisors</strong>. We've received your inquiry and are excited to help you with your commercial real estate needs.</p>
+              <p>Thank you for your inquiry about commercial real estate. We've scheduled an appointment to discuss your requirements and show you the property that matches your needs.</p>
 
               <div class="highlight-box">
-                <h3 style="margin-top: 0; color: #059669;">✅ What happens next?</h3>
-                <ul style="margin: 0; padding-left: 20px;">
-                  <li><strong>Within 24 hours:</strong> One of our experienced advisors will contact you</li>
-                  <li><strong>We'll discuss:</strong> Your specific requirements and objectives</li>
-                  <li><strong>Custom solutions:</strong> Tailored recommendations based on your needs</li>
-                  <li><strong>Next steps:</strong> A clear action plan to move forward</li>
-                </ul>
+                <h3 style="margin-top: 0; color: #059669;">📅 Your Appointment Confirmation</h3>
+                <p><strong>Meeting scheduled to discuss:</strong> ${data.propertyInterest || 'Commercial real estate opportunities'}</p>
+                <p>Our team will provide detailed information about available properties and help you find the perfect space for your business needs.</p>
               </div>
 
               ${data.propertyInterest ? `
-                <p><strong>🏠 We noted your interest in:</strong> ${data.propertyInterest}</p>
-                <p>Our team is already preparing relevant market insights and property options that match your criteria.</p>
+                <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                  <p style="margin: 0;"><strong>🏠 Property of Interest:</strong></p>
+                  <p style="margin: 5px 0 0 0; font-size: 16px;">
+                    <a href="https://shabay.netlify.app/properties" style="color: #059669; text-decoration: none; font-weight: bold;">
+                      📍 ${data.propertyInterest}
+                    </a>
+                  </p>
+                </div>
               ` : ''}
 
-              <p>In the meantime, feel free to:</p>
+              <p><strong>Need to make changes?</strong></p>
+              <div style="text-align: center; margin: 20px 0;">
+                <a href="https://sbaycrm.netlify.app/api/appointments/cancel?email=${encodeURIComponent(data.leadEmail)}"
+                   style="background: #EF4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                  Cancel Appointment
+                </a>
+              </div>
+
+              <p>Questions? Contact us:</p>
               <ul>
-                <li>📱 Call us directly at <strong>(XXX) XXX-XXXX</strong></li>
-                <li>📧 Reply to this email with any additional questions</li>
-                <li>🌐 Visit our website for more information</li>
+                <li>📱 Call us directly at <strong>(954) 937-9667</strong></li>
+                <li>📧 Reply to this email with any questions</li>
+                <li>🌐 Visit our website for more properties</li>
               </ul>
 
               <div style="background: #F8FAFC; padding: 15px; border-radius: 8px; margin-top: 20px;">
