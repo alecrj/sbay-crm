@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { supabase, Property } from "@/lib/supabase";
 import Image from "next/image";
 import PropertyPreview from "./PropertyPreview";
+import ImageDropZone from "./ImageDropZone";
 
 interface PropertyFormProps {
   property?: Property | null;
@@ -52,8 +53,8 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
         type: property.type || "warehouse",
         location: property.location || "",
         county: property.county || "Miami-Dade",
-        price: property.price || "",
-        size: property.size || "",
+        price: property.price ? property.price.replace(/[^\d.]/g, '') : "",
+        size: property.size ? property.size.replace(/[^\d]/g, '') : "",
         available: property.available || true,
         featured: property.featured || false,
         description: property.description || "",
@@ -86,8 +87,11 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
     setLoading(true);
 
     try {
+      // Format the data properly for storage
       const propertyData = {
         ...formData,
+        price: `$${formData.price}/SF/YR`,
+        size: `${formData.size} sq ft`,
         features: formData.features.filter(f => f.trim() !== ""),
         gallery: galleryImages.filter(img => img.trim() !== ""),
       };
@@ -132,7 +136,12 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else if (type === 'number') {
-      setFormData(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
+      // Store raw numbers for price and size, integers for other numeric fields
+      if (name === 'price' || name === 'size') {
+        setFormData(prev => ({ ...prev, [name]: value }));
+      } else {
+        setFormData(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
+      }
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
 
@@ -160,14 +169,16 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
     }));
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+  const handleImageUpload = async (files: File[]) => {
     if (!files || files.length === 0) return;
 
+    console.log('Starting image upload for', files.length, 'files');
     setUploadingImage(true);
 
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
+      const uploadPromises = files.map(async (file, index) => {
+        console.log(`Uploading file ${index + 1}: ${file.name}, size: ${file.size}, type: ${file.type}`);
+
         // Validate file type
         if (!file.type.startsWith('image/')) {
           throw new Error(`${file.name} is not an image file`);
@@ -178,29 +189,75 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
           throw new Error(`${file.name} must be less than 5MB`);
         }
 
-        // Create a unique filename
+        // Create a unique filename with timestamp and random string
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2);
+        const fileName = `${timestamp}-${randomStr}.${fileExt}`;
         const filePath = `properties/${fileName}`;
 
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
+        console.log(`Uploading to path: ${filePath}`);
+
+        // Check if bucket exists first
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        if (bucketsError) {
+          console.error('Error listing buckets:', bucketsError);
+        } else {
+          console.log('Available buckets:', buckets.map(b => b.name));
+        }
+
+        // Try to upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('property-images')
-          .upload(filePath, file);
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) {
-          throw uploadError;
+          console.error('Supabase upload error:', uploadError);
+
+          // If bucket doesn't exist, try to create it
+          if (uploadError.message.includes('Bucket not found')) {
+            console.log('Bucket not found, attempting to create...');
+            const { error: createBucketError } = await supabase.storage.createBucket('property-images', {
+              public: true
+            });
+
+            if (createBucketError) {
+              console.error('Failed to create bucket:', createBucketError);
+              throw new Error(`Failed to upload ${file.name}: Bucket creation failed - ${createBucketError.message}`);
+            }
+
+            // Try upload again after creating bucket
+            const { data: retryUploadData, error: retryUploadError } = await supabase.storage
+              .from('property-images')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+
+            if (retryUploadError) {
+              throw new Error(`Failed to upload ${file.name} after bucket creation: ${retryUploadError.message}`);
+            }
+          } else {
+            throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          }
         }
+
+        console.log('Upload successful:', uploadData);
 
         // Get public URL
         const { data: urlData } = supabase.storage
           .from('property-images')
           .getPublicUrl(filePath);
 
+        console.log('Generated public URL:', urlData.publicUrl);
         return urlData.publicUrl;
       });
 
       const uploadedUrls = await Promise.all(uploadPromises);
+      console.log('All uploads completed:', uploadedUrls);
 
       // Add new images to gallery and form data
       const newGallery = [...galleryImages, ...uploadedUrls];
@@ -213,6 +270,10 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
         setImagePreview(uploadedUrls[0]);
         setFeaturedImageIndex(0);
       }
+
+      // Show success message
+      alert(`Successfully uploaded ${uploadedUrls.length} image(s)!`);
+
     } catch (error: any) {
       console.error('Error uploading images:', error);
       alert(`Error uploading images: ${error.message}`);
@@ -334,30 +395,38 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Price per Square Foot *
             </label>
-            <input
-              type="text"
-              name="price"
-              value={formData.price}
-              onChange={handleInputChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              placeholder="e.g., $8.50/sq ft"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+              <input
+                type="number"
+                step="0.01"
+                name="price"
+                value={formData.price}
+                onChange={handleInputChange}
+                required
+                className="w-full pl-8 pr-20 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                placeholder="8.50"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">/SF/YR</span>
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Square Footage *
             </label>
-            <input
-              type="text"
-              name="size"
-              value={formData.size}
-              onChange={handleInputChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              placeholder="e.g., 25,000 sq ft"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                name="size"
+                value={formData.size}
+                onChange={handleInputChange}
+                required
+                className="w-full pr-16 py-2 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                placeholder="10000"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">sq ft</span>
+            </div>
           </div>
         </div>
 
@@ -547,80 +616,14 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
         <div className="space-y-4">
           <h4 className="text-md font-medium text-gray-900 dark:text-white">Property Images</h4>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Upload Property Images
-            </label>
-            <div className="flex gap-4 items-start">
-              <div className="flex-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                  disabled={uploadingImage}
-                />
-                <p className="text-xs text-gray-500 mt-1">Upload multiple images (max 5MB each). The first image will be featured by default.</p>
-              </div>
-            </div>
-
-            {uploadingImage && (
-              <div className="flex items-center mt-2 text-blue-600">
-                <svg className="animate-spin -ml-1 mr-3 h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Uploading images...
-              </div>
-            )}
-          </div>
-
-          {/* Image Gallery with Featured Selection */}
-          {galleryImages.length > 0 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Image Gallery (Click to set as featured image)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {galleryImages.map((imageUrl, index) => (
-                  <div key={index} className="relative group">
-                    <div
-                      className={`w-full h-24 border-2 rounded-lg overflow-hidden bg-gray-100 cursor-pointer transition-all ${
-                        index === featuredImageIndex
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                      onClick={() => setFeaturedImage(imageUrl, index)}
-                    >
-                      <Image
-                        src={imageUrl}
-                        alt={`Gallery image ${index + 1}`}
-                        width={120}
-                        height={96}
-                        className="w-full h-full object-cover"
-                      />
-                      {index === featuredImageIndex && (
-                        <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                          Featured
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeGalleryImageNew(index);
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <ImageDropZone
+            onImagesUploaded={handleImageUpload}
+            isUploading={uploadingImage}
+            galleryImages={galleryImages}
+            featuredImageIndex={featuredImageIndex}
+            onSetFeatured={setFeaturedImage}
+            onRemoveImage={removeGalleryImageNew}
+          />
 
           {/* Manual Image URL Input (fallback) */}
           <div>

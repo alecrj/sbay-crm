@@ -5,6 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useUserRole } from '../../../contexts/UserRoleContext';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
+import ImageDropZone from '../../../components/properties/ImageDropZone';
 
 interface Property {
   id: string;
@@ -50,8 +51,13 @@ export default function PropertiesPage() {
     featured: false,
     available: true,
     image: '',
+    gallery: [] as string[],
     features: [] as string[]
   });
+
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [featuredImageIndex, setFeaturedImageIndex] = useState<number>(0);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Available feature options
   const availableFeatures = [
@@ -83,10 +89,6 @@ export default function PropertiesPage() {
     'Secured Yard'
   ];
 
-  // Image upload states
-  const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
   // Custom feature input
   const [customFeature, setCustomFeature] = useState('');
 
@@ -108,43 +110,156 @@ export default function PropertiesPage() {
     }
   };
 
-  const handleImageUpload = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
-      return;
-    }
+  const handleImageUpload = async (files: File[]) => {
+    if (!files || files.length === 0) return;
 
-    setUploading(true);
+    console.log('Starting image upload for', files.length, 'files');
+    setUploadingImage(true);
+
     try {
-      // For now, we'll use a placeholder implementation
-      // In production, you'd upload to a service like Cloudinary, AWS S3, etc.
-      const imageUrl = URL.createObjectURL(file);
-      setFormData({...formData, image: imageUrl});
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Failed to upload image');
+      const uploadPromises = files.map(async (file, index) => {
+        console.log(`Uploading file ${index + 1}: ${file.name}, size: ${file.size}, type: ${file.type}`);
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          throw new Error(`${file.name} is not an image file`);
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`${file.name} must be less than 5MB`);
+        }
+
+        // Create a unique filename with timestamp and random string
+        const fileExt = file.name.split('.').pop();
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2);
+        const fileName = `${timestamp}-${randomStr}.${fileExt}`;
+        const filePath = `properties/${fileName}`;
+
+        console.log(`Uploading to path: ${filePath}`);
+
+        // Check if bucket exists first
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        if (bucketsError) {
+          console.error('Error listing buckets:', bucketsError);
+        } else {
+          console.log('Available buckets:', buckets.map(b => b.name));
+        }
+
+        // Try to upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Supabase upload error:', uploadError);
+
+          // If bucket doesn't exist, try to create it
+          if (uploadError.message.includes('Bucket not found')) {
+            console.log('Bucket not found, attempting to create...');
+            const { error: createBucketError } = await supabase.storage.createBucket('property-images', {
+              public: true,
+              allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
+              fileSizeLimit: 5242880 // 5MB
+            });
+
+            if (createBucketError) {
+              console.error('Failed to create bucket:', createBucketError);
+              throw new Error(`Failed to upload ${file.name}: Bucket creation failed - ${createBucketError.message}`);
+            }
+
+            console.log('Bucket created successfully, retrying upload...');
+
+            // Try upload again after creating bucket
+            const { data: retryUploadData, error: retryUploadError } = await supabase.storage
+              .from('property-images')
+              .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+
+            if (retryUploadError) {
+              throw new Error(`Failed to upload ${file.name} after bucket creation: ${retryUploadError.message}`);
+            }
+
+            console.log('Retry upload successful:', retryUploadData);
+          } else {
+            throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+          }
+        }
+
+        console.log('Upload successful:', uploadData);
+
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(filePath);
+
+        console.log('Generated public URL:', urlData.publicUrl);
+
+        // Verify the URL is accessible
+        try {
+          const testResponse = await fetch(urlData.publicUrl, { method: 'HEAD' });
+          console.log('Image URL test response:', testResponse.status, testResponse.statusText);
+          if (!testResponse.ok) {
+            console.warn('Image URL not accessible:', urlData.publicUrl);
+          }
+        } catch (error) {
+          console.error('Error testing image URL:', error);
+        }
+
+        return urlData.publicUrl;
+      });
+
+      const uploadedUrls = await Promise.all(uploadPromises);
+      console.log('All uploads completed:', uploadedUrls);
+
+      // Add new images to gallery and form data
+      const newGallery = [...galleryImages, ...uploadedUrls];
+      setGalleryImages(newGallery);
+      setFormData(prev => ({ ...prev, gallery: newGallery }));
+
+      // Set first uploaded image as featured if no featured image exists
+      if (galleryImages.length === 0 && uploadedUrls.length > 0) {
+        setFormData(prev => ({ ...prev, image: uploadedUrls[0] }));
+        setFeaturedImageIndex(0);
+      }
+
+      // Show success message
+      alert(`Successfully uploaded ${uploadedUrls.length} image(s)!`);
+
+    } catch (error: any) {
+      console.error('Error uploading images:', error);
+      alert(`Error uploading images: ${error.message}`);
     } finally {
-      setUploading(false);
+      setUploadingImage(false);
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleImageUpload(e.dataTransfer.files[0]);
-    }
+  const setFeaturedImage = (imageUrl: string, index: number) => {
+    setFormData(prev => ({ ...prev, image: imageUrl }));
+    setFeaturedImageIndex(index);
   };
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+  const removeGalleryImage = (index: number) => {
+    const newGallery = galleryImages.filter((_, i) => i !== index);
+    setGalleryImages(newGallery);
+    setFormData(prev => ({ ...prev, gallery: newGallery }));
+
+    // If removed image was featured, set new featured image
+    if (index === featuredImageIndex) {
+      if (newGallery.length > 0) {
+        setFeaturedImage(newGallery[0], 0);
+      } else {
+        setFormData(prev => ({ ...prev, image: '' }));
+        setFeaturedImageIndex(0);
+      }
+    } else if (index < featuredImageIndex) {
+      setFeaturedImageIndex(prev => prev - 1);
     }
   };
 
@@ -196,11 +311,20 @@ export default function PropertiesPage() {
     console.log('✏️ Editing property:', editingProperty);
 
     try {
+      // Format the data properly for storage
+      const propertyData = {
+        ...formData,
+        price: `$${formData.price}/SF/YR`,
+        size: `${formData.size} sq ft`,
+        location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
+        gallery: galleryImages.filter(img => img.trim() !== "")
+      };
+
       if (editingProperty) {
         const { error } = await supabase
           .from('properties')
           .update({
-            ...formData,
+            ...propertyData,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingProperty.id);
@@ -210,7 +334,7 @@ export default function PropertiesPage() {
         console.log('➕ Inserting new property...');
         const { data, error } = await supabase
           .from('properties')
-          .insert([formData])
+          .insert([propertyData])
           .select();
 
         console.log('💾 Insert result:', { data, error });
@@ -238,6 +362,7 @@ export default function PropertiesPage() {
 
   const handleEdit = (property: any) => {
     setEditingProperty(property);
+    const galleryArray = Array.isArray(property.gallery) ? property.gallery : [];
     setFormData({
       title: property.title,
       type: property.type,
@@ -246,14 +371,23 @@ export default function PropertiesPage() {
       street_address: property.street_address || '',
       city: property.city || '',
       zip_code: property.zip_code || '',
-      size: property.size,
-      price: property.price,
+      size: property.size ? property.size.replace(/[^\d]/g, '') : '',
+      price: property.price ? property.price.replace(/[^\d.]/g, '') : '',
       description: property.description,
       featured: property.featured,
       available: property.available,
       image: property.image || '',
+      gallery: galleryArray,
       features: property.features || []
     });
+
+    // Set gallery images and featured index for existing property
+    setGalleryImages(galleryArray);
+    if (property.image && galleryArray.length > 0) {
+      const featuredIndex = galleryArray.findIndex(img => img === property.image);
+      setFeaturedImageIndex(featuredIndex >= 0 ? featuredIndex : 0);
+    }
+
     setShowForm(true);
   };
 
@@ -288,8 +422,11 @@ export default function PropertiesPage() {
       featured: false,
       available: true,
       image: '',
+      gallery: [],
       features: []
     });
+    setGalleryImages([]);
+    setFeaturedImageIndex(0);
     setEditingProperty(null);
     setShowForm(false);
     setCustomFeature('');
@@ -403,23 +540,6 @@ export default function PropertiesPage() {
                 <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pricing & Details</h3>
                   <div className="space-y-6">
-                    {/* Main Location (for display/search) */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Location Summary *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={formData.location}
-                        onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Doral, Miami-Dade, FL"
-                      />
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Brief location description for display (e.g., "Doral, Miami-Dade, FL")
-                      </p>
-                    </div>
 
                     {/* Detailed Address Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -483,118 +603,63 @@ export default function PropertiesPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Size *
+                          Square Footage *
                         </label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.size}
-                          onChange={(e) => setFormData({...formData, size: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="10,000 SF"
-                        />
+                        <div className="relative">
+                          <input
+                            type="number"
+                            required
+                            value={formData.size}
+                            onChange={(e) => setFormData({...formData, size: e.target.value})}
+                            className="w-full pr-16 py-2 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="10000"
+                          />
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">sq ft</span>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Price *
+                          Price per Square Foot *
                         </label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.price}
-                          onChange={(e) => setFormData({...formData, price: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="$8.50/SF/Year"
-                        />
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            value={formData.price}
+                            onChange={(e) => setFormData({...formData, price: e.target.value})}
+                            className="w-full pl-8 pr-20 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="8.50"
+                          />
+                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">/SF/YR</span>
+                        </div>
                       </div>
                     </div>
 
                     <div className="col-span-full">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Property Image
-                      </label>
+                      <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Property Images</h4>
 
-                      {/* Drag & Drop Upload Area */}
-                      <div
-                        className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                          dragActive
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-                        }`}
-                        onDrop={handleDrop}
-                        onDragOver={handleDrag}
-                        onDragEnter={handleDrag}
-                        onDragLeave={handleDrag}
-                      >
-                        {formData.image ? (
-                          <div className="space-y-4">
-                            <img
-                              src={formData.image}
-                              alt="Property preview"
-                              className="mx-auto h-32 w-auto rounded-lg object-cover"
-                            />
-                            <div className="flex gap-2 justify-center">
-                              <button
-                                type="button"
-                                onClick={() => setFormData({...formData, image: ''})}
-                                className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
-                              >
-                                Remove
-                              </button>
-                              <label className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 cursor-pointer">
-                                Change
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="mx-auto h-12 w-12 text-gray-400">
-                              <svg fill="none" stroke="currentColor" viewBox="0 0 48 48">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                                />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-gray-600 dark:text-gray-400">
-                                <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span> or drag and drop
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, JPEG up to 10MB</p>
-                            </div>
-                            <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer">
-                              {uploading ? 'Uploading...' : 'Select Image'}
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                disabled={uploading}
-                                onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])}
-                              />
-                            </label>
-                          </div>
-                        )}
-                      </div>
+                      <ImageDropZone
+                        onImagesUploaded={handleImageUpload}
+                        isUploading={uploadingImage}
+                        galleryImages={galleryImages}
+                        featuredImageIndex={featuredImageIndex}
+                        onSetFeatured={setFeaturedImage}
+                        onRemoveImage={removeGalleryImage}
+                      />
 
-                      {/* Alternative: Manual URL input */}
+                      {/* Manual Image URL Input (fallback) */}
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Or enter image URL
+                          Or add image URL manually
                         </label>
                         <input
                           type="url"
                           value={formData.image}
                           onChange={(e) => setFormData({...formData, image: e.target.value})}
+                          placeholder="Paste image URL here"
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="https://example.com/image.jpg"
                         />
                       </div>
                     </div>
