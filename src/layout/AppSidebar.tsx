@@ -58,6 +58,12 @@ const navItems: NavItem[] = [
     path: "/calendar",
     adminOnly: true,
   },
+  {
+    icon: <CalenderIcon />,
+    name: "Property Calendars",
+    path: "/property-calendars",
+    adminOnly: true,
+  },
 ];
 
 const othersItems: NavItem[] = [
