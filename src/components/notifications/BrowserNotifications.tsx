@@ -21,7 +21,13 @@ const BrowserNotifications: React.FC<BrowserNotificationsProps> = ({ children })
     // Check if browser supports notifications
     if ('Notification' in window) {
       setPermission(Notification.permission);
-      setIsEnabled(Notification.permission === 'granted');
+
+      // Auto-request permission if not set
+      if (Notification.permission === 'default') {
+        requestPermission();
+      } else {
+        setIsEnabled(Notification.permission === 'granted');
+      }
     }
   }, []);
 
@@ -110,46 +116,6 @@ const BrowserNotifications: React.FC<BrowserNotificationsProps> = ({ children })
 
   return (
     <>
-      {/* Notification permission banner */}
-      {permission === 'default' && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-blue-600 text-white px-4 py-2 text-sm">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex items-center space-x-2">
-              <span>🔔</span>
-              <span>
-                Enable notifications to get instant alerts for new leads and appointments
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={requestPermission}
-                className="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded text-xs font-medium transition-colors"
-              >
-                Enable
-              </button>
-              <button
-                onClick={() => setPermission('denied')}
-                className="text-blue-200 hover:text-white text-xs underline"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Status indicator */}
-      {isEnabled && (
-        <div className="fixed bottom-4 right-4 z-40">
-          <div className="bg-green-100 border border-green-200 rounded-lg px-3 py-2 shadow-sm">
-            <div className="flex items-center space-x-2 text-green-800 text-xs">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Notifications enabled</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {children}
     </>
   );

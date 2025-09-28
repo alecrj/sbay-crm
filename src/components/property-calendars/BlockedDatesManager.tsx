@@ -49,9 +49,26 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ propertyId })
     endTime: '17:00'
   });
 
+  // Calendar state
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, [propertyId]);
+
+  // Close calendar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showCalendar && !target.closest('.calendar-container')) {
+        setShowCalendar(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCalendar]);
 
   const fetchData = async () => {
     try {
@@ -177,6 +194,62 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ propertyId })
     return today.toISOString().split('T')[0];
   };
 
+  // Calendar helper functions
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    const days = [];
+
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day));
+    }
+
+    return days;
+  };
+
+  const isDateBlocked = (date: Date) => {
+    const dateString = date.toISOString().split('T')[0];
+    return blockedDates.some(bd => bd.blocked_date === dateString);
+  };
+
+  const isPastDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+  };
+
+  const formatDateForInput = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const selectDate = (date: Date) => {
+    setNewBlockedDate(prev => ({ ...prev, date: formatDateForInput(date) }));
+    setShowCalendar(false);
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+  };
+
+  const prevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+  };
+
+  const goToToday = () => {
+    setCurrentMonth(new Date());
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -251,18 +324,131 @@ const BlockedDatesManager: React.FC<BlockedDatesManagerProps> = ({ propertyId })
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date Selection */}
-            <div>
+            <div className="relative calendar-container">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Date *
               </label>
-              <input
-                type="date"
-                value={newBlockedDate.date}
-                onChange={(e) => setNewBlockedDate(prev => ({ ...prev, date: e.target.value }))}
-                min={getMinDate()}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              <button
+                type="button"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white text-left flex items-center justify-between"
                 disabled={saving}
-              />
+              >
+                <span>
+                  {newBlockedDate.date
+                    ? new Date(newBlockedDate.date + 'T00:00:00').toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
+                    : 'Select a date'
+                  }
+                </span>
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+
+              {/* Calendar Dropdown */}
+              {showCalendar && (
+                <div className="absolute top-full mt-2 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 w-80">
+                  {/* Calendar Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <button
+                      type="button"
+                      onClick={prevMonth}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </h3>
+
+                    <button
+                      type="button"
+                      onClick={nextMonth}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="mb-4">
+                    <button
+                      type="button"
+                      onClick={goToToday}
+                      className="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800"
+                    >
+                      Today
+                    </button>
+                  </div>
+
+                  {/* Days of Week Header */}
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                      <div key={day} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {getDaysInMonth(currentMonth).map((date, index) => {
+                      if (!date) {
+                        return <div key={index} className="h-8"></div>;
+                      }
+
+                      const isBlocked = isDateBlocked(date);
+                      const isPast = isPastDate(date);
+                      const isSelected = newBlockedDate.date === formatDateForInput(date);
+
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => !isPast && selectDate(date)}
+                          disabled={isPast}
+                          className={`h-8 text-sm rounded flex items-center justify-center relative ${
+                            isPast
+                              ? 'text-gray-300 cursor-not-allowed dark:text-gray-600'
+                              : isSelected
+                                ? 'bg-blue-600 text-white'
+                                : isBlocked
+                                  ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                  : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white'
+                          }`}
+                        >
+                          {date.getDate()}
+                          {isBlocked && (
+                            <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full transform translate-x-1 -translate-y-1"></div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Legend */}
+                  <div className="mt-4 flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
+                      <span>Blocked</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-blue-600 rounded"></div>
+                      <span>Selected</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Reason */}
