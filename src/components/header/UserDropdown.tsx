@@ -25,12 +25,9 @@ function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
         className="flex items-center text-gray-700 dark:text-gray-400 dropdown-toggle"
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11 bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-          <Image
-            width={24}
-            height={24}
-            src="/images/logo/sbalogo.png"
-            alt="SBA Logo"
-          />
+          <span className="text-blue-600 dark:text-blue-400 font-semibold text-lg">
+            {user?.email ? user.email.charAt(0).toUpperCase() : '?'}
+          </span>
         </span>
 
         <span className="block mr-1 font-medium text-theme-sm">
