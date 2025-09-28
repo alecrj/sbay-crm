@@ -21,6 +21,9 @@ interface FullCalendarEvent {
     attendees?: string[];
     leadId?: string;
     appointmentId?: string;
+    propertyId?: string;
+    propertyTitle?: string;
+    propertyCounty?: string;
   };
 }
 
@@ -39,13 +42,18 @@ const CalendarManager: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Fetch appointments directly from Supabase
+      // Fetch appointments directly from Supabase with property information
       const { data: appointments, error } = await supabase
         .from('appointments')
         .select(`
           *,
           leads (
             id, name, email, phone, company
+          ),
+          property_calendars (
+            property_id,
+            property_title,
+            property_county
           )
         `)
         .order('start_time', { ascending: true });
@@ -56,25 +64,36 @@ const CalendarManager: React.FC = () => {
       }
 
       // Convert appointments to FullCalendar format
-      const formattedEvents: FullCalendarEvent[] = (appointments || []).map((appointment) => ({
-        id: appointment.id,
-        title: appointment.title,
-        start: appointment.start_time,
-        end: appointment.end_time,
-        backgroundColor: getEventColor(appointment.title, appointment.status),
-        extendedProps: {
-          description: appointment.description,
-          location: appointment.location,
-          attendees: appointment.attendees || [],
-          leadId: appointment.lead_id,
-          appointmentId: appointment.id,
-          status: appointment.status,
-          leadName: appointment.leads?.name,
-          leadEmail: appointment.leads?.email,
-          leadPhone: appointment.leads?.phone,
-          leadCompany: appointment.leads?.company,
-        }
-      }));
+      const formattedEvents: FullCalendarEvent[] = (appointments || []).map((appointment) => {
+        // Create title with property information
+        const propertyTitle = appointment.property_calendars?.property_title;
+        const displayTitle = propertyTitle
+          ? `${appointment.title} @ ${propertyTitle}`
+          : appointment.title;
+
+        return {
+          id: appointment.id,
+          title: displayTitle,
+          start: appointment.start_time,
+          end: appointment.end_time,
+          backgroundColor: getEventColor(appointment.title, appointment.status, appointment.property_id),
+          extendedProps: {
+            description: appointment.description,
+            location: appointment.location,
+            attendees: appointment.attendees || [],
+            leadId: appointment.lead_id,
+            appointmentId: appointment.id,
+            status: appointment.status,
+            leadName: appointment.leads?.name,
+            leadEmail: appointment.leads?.email,
+            leadPhone: appointment.leads?.phone,
+            leadCompany: appointment.leads?.company,
+            propertyId: appointment.property_id,
+            propertyTitle: appointment.property_calendars?.property_title,
+            propertyCounty: appointment.property_calendars?.property_county,
+          }
+        };
+      });
 
       setEvents(formattedEvents);
     } catch (error) {
@@ -84,12 +103,33 @@ const CalendarManager: React.FC = () => {
     }
   };
 
-  const getEventColor = (title: string, status?: string): string => {
+  const getEventColor = (title: string, status?: string, propertyId?: string): string => {
     // Color by status first
     if (status === 'confirmed') return '#10B981'; // Green
     if (status === 'pending') return '#F59E0B'; // Amber
     if (status === 'cancelled') return '#EF4444'; // Red
     if (status === 'completed') return '#6B7280'; // Gray
+
+    // If we have a property ID, use a property-specific color
+    if (propertyId) {
+      const colors = [
+        '#3B82F6', // Blue
+        '#8B5CF6', // Purple
+        '#EF4444', // Red
+        '#F59E0B', // Amber
+        '#10B981', // Green
+        '#F97316', // Orange
+        '#EC4899', // Pink
+        '#6366F1', // Indigo
+      ];
+
+      // Use property ID to consistently assign colors
+      const colorIndex = Math.abs(propertyId.split('').reduce((a, b) => {
+        return a + b.charCodeAt(0);
+      }, 0)) % colors.length;
+
+      return colors[colorIndex];
+    }
 
     // Fallback to title-based colors
     if (title.toLowerCase().includes('consultation')) return '#3B82F6';

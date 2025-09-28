@@ -48,13 +48,15 @@ export interface Lead {
   id: string
   title: string
   type: 'consultation' | 'property-inquiry' | 'general-inquiry' | 'contact-form'
-  status: 'new' | 'contacted' | 'qualified' | 'proposal-sent' | 'closed-won' | 'closed-lost'
+  status: 'new' | 'tour-scheduled' | 'canceled-no-show' | 'showing-completed' | 'won' | 'lost'
   priority: 'low' | 'medium' | 'high' | 'urgent'
+  lead_score?: 'low' | 'medium' | 'high'
   name: string
   email: string
   phone?: string
   company?: string
   property_interest?: string
+  property_id?: string
   space_requirements?: string
   budget?: string
   timeline?: string

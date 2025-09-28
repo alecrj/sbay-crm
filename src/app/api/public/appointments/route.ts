@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { createCalendarEvent } from '@/lib/google-calendar';
 import { scheduleAppointmentReminders } from '@/lib/notification-scheduler';
 import { isTimeSlotAvailable } from '@/lib/google-calendar';
+import { checkPropertyAvailability } from '@/lib/property-availability';
 
 // CORS headers for cross-origin requests from the public website
 const corsHeaders = {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
 
     // Validate required fields
-    const { name, email, appointmentDate, appointmentTime } = data;
+    const { name, email, appointmentDate, appointmentTime, propertyId } = data;
     if (!name || !email || !appointmentDate || !appointmentTime) {
       return NextResponse.json(
         { error: 'Name, email, appointment date, and time are required' },
@@ -70,13 +71,29 @@ export async function POST(request: NextRequest) {
     const duration = data.duration || 60; // minutes
     const endDateTime = new Date(appointmentDateTime.getTime() + duration * 60 * 1000);
 
-    // Check if time slot is available
-    const isAvailable = await isTimeSlotAvailable(appointmentDateTime, endDateTime);
-    if (!isAvailable) {
-      return NextResponse.json(
-        { error: 'The selected time slot is not available. Please choose a different time.' },
-        { status: 409, headers: corsHeaders }
+    // Check if time slot is available for the property
+    if (propertyId) {
+      const propertyAvailability = await checkPropertyAvailability(
+        propertyId,
+        appointmentDateTime,
+        endDateTime
       );
+
+      if (!propertyAvailability.isAvailable) {
+        return NextResponse.json(
+          { error: propertyAvailability.reason || 'The selected time slot is not available. Please choose a different time.' },
+          { status: 409, headers: corsHeaders }
+        );
+      }
+    } else {
+      // Fallback to Google Calendar check for backward compatibility
+      const isAvailable = await isTimeSlotAvailable(appointmentDateTime, endDateTime);
+      if (!isAvailable) {
+        return NextResponse.json(
+          { error: 'The selected time slot is not available. Please choose a different time.' },
+          { status: 409, headers: corsHeaders }
+        );
+      }
     }
 
     // Extract appointment data
@@ -182,6 +199,7 @@ export async function POST(request: NextRequest) {
       .from('appointments')
       .insert([{
         lead_id: leadId,
+        property_id: propertyId || null,
         title: appointmentData.title,
         description: appointmentData.description,
         start_time: appointmentData.start_time,
@@ -216,7 +234,8 @@ export async function POST(request: NextRequest) {
         .update({
           consultation_date: appointmentDate,
           consultation_time: appointmentTime,
-          status: 'qualified', // Move to qualified since they booked an appointment
+          property_id: propertyId || null,
+          status: 'tour-scheduled', // Move to tour-scheduled since they booked an appointment
         })
         .eq('id', leadId);
 

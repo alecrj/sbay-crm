@@ -27,47 +27,12 @@ const UpcomingAppointments: React.FC = () => {
   const fetchUpcomingAppointments = async () => {
     try {
       setIsLoading(true);
-      const now = new Date();
-      const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-      const { data, error } = await supabase
-        .from('appointments')
-        .select(`
-          id,
-          title,
-          start_time,
-          end_time,
-          location,
-          lead:leads(name, email, company)
-        `)
-        .gte('start_time', now.toISOString())
-        .lte('start_time', oneWeekFromNow.toISOString())
-        .order('start_time', { ascending: true })
-        .limit(8);
+      // Reset all data to show empty state
+      setAppointments([]);
 
-      if (error) {
-        console.error('Supabase error fetching upcoming appointments:', error);
-        console.error('Error details:', {
-          message: error.message,
-          hint: error.hint,
-          details: error.details,
-          code: error.code
-        });
-
-        // If table doesn't exist, show empty state
-        if (error.code === '42P01') {
-          console.log('Appointments table does not exist yet. This feature will be available when calendar functionality is implemented.');
-          setAppointments([]);
-          return;
-        }
-
-        throw error;
-      }
-
-      setAppointments(data || []);
     } catch (error) {
       console.error('Error fetching upcoming appointments:', error);
-      // Set empty array on any error to prevent UI crashes
       setAppointments([]);
     } finally {
       setIsLoading(false);
@@ -124,7 +89,7 @@ const UpcomingAppointments: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-[500px] flex flex-col">
       <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Upcoming Appointments</h3>
@@ -137,9 +102,9 @@ const UpcomingAppointments: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 flex-1 overflow-hidden flex flex-col">
         {appointments.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="text-center py-8 flex-1 flex flex-col justify-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -152,7 +117,7 @@ const UpcomingAppointments: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto flex-1">
             {appointments.map((appointment) => {
               const { dayText, timeText, isToday, isTomorrow } = formatDateTime(appointment.start_time);
               return (

@@ -11,12 +11,12 @@ import LeadForm from "./LeadForm";
 import LeadCard from "./LeadCard";
 
 const LEAD_STATUSES = [
-  { id: "new", title: "New Leads", color: "bg-blue-500" },
-  { id: "contacted", title: "Contacted", color: "bg-yellow-500" },
-  { id: "qualified", title: "Qualified", color: "bg-purple-500" },
-  { id: "proposal-sent", title: "Proposal Sent", color: "bg-orange-500" },
-  { id: "closed-won", title: "Closed Won", color: "bg-green-500" },
-  { id: "closed-lost", title: "Closed Lost", color: "bg-red-500" },
+  { id: "new", title: "Lead Form", color: "bg-blue-500" },
+  { id: "tour-scheduled", title: "Tour Scheduled", color: "bg-purple-500" },
+  { id: "canceled-no-show", title: "Canceled/No Show", color: "bg-orange-500" },
+  { id: "showing-completed", title: "Showing Completed", color: "bg-yellow-500" },
+  { id: "won", title: "Won", color: "bg-green-500" },
+  { id: "lost", title: "Lost", color: "bg-red-500" },
 ] as const;
 
 const LeadKanban: React.FC = () => {
@@ -36,7 +36,15 @@ const LeadKanban: React.FC = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('leads')
-        .select('*')
+        .select(`
+          *,
+          property_calendars (
+            property_id,
+            property_title,
+            property_size,
+            property_county
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {

@@ -5,7 +5,14 @@ import { Lead } from "@/lib/supabase";
 import LeadAppointments from "./LeadAppointments";
 
 interface LeadCardProps {
-  lead: Lead;
+  lead: Lead & {
+    property_calendars?: {
+      property_id: string;
+      property_title: string;
+      property_size?: string;
+      property_county?: string;
+    } | null;
+  };
   onEdit: (lead: Lead) => void;
   priorityColor: string;
   isAdmin?: boolean;
@@ -67,6 +74,29 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, priorityColor, isAdmi
     return (
       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colors[priority]}`}>
         {priority.toUpperCase()}
+      </span>
+    );
+  };
+
+  const getLeadScoreBadge = (leadScore?: Lead['lead_score']) => {
+    if (!leadScore) return null;
+
+    const colors = {
+      high: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      medium: 'bg-amber-100 text-amber-800 border-amber-200',
+      low: 'bg-gray-100 text-gray-800 border-gray-200',
+    };
+
+    const icons = {
+      high: '🔥',
+      medium: '⭐',
+      low: '💭',
+    };
+
+    return (
+      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colors[leadScore]}`}>
+        <span className="mr-1">{icons[leadScore]}</span>
+        {leadScore.toUpperCase()} SCORE
       </span>
     );
   };
@@ -140,8 +170,9 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, priorityColor, isAdmi
               {lead.name}
             </h4>
           </div>
-          <div className="ml-2 flex-shrink-0">
+          <div className="ml-2 flex-shrink-0 flex flex-col gap-1">
             {getPriorityBadge(lead.priority)}
+            {getLeadScoreBadge(lead.lead_score)}
           </div>
         </div>
 
@@ -178,6 +209,29 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, priorityColor, isAdmi
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
               <span>{lead.property_interest}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Scheduled Property */}
+        {lead.property_calendars && (
+          <div className="mb-3">
+            <div className="flex items-center space-x-2 text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-200 dark:border-blue-800">
+              <svg className="w-3 h-3 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <div className="flex-1">
+                <div className="font-medium">{lead.property_calendars.property_title}</div>
+                <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+                  {lead.property_calendars.property_size && (
+                    <span>📐 {lead.property_calendars.property_size}</span>
+                  )}
+                  {lead.property_calendars.property_county && (
+                    <span>📍 {lead.property_calendars.property_county}</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -26,35 +26,12 @@ const RecentLeads: React.FC = () => {
   const fetchRecentLeads = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('leads')
-        .select('id, name, email, company, status, priority, source, property_interest, created_at')
-        .order('created_at', { ascending: false })
-        .limit(10);
 
-      if (error) {
-        console.error('Supabase error fetching recent leads:', error);
-        console.error('Error details:', {
-          message: error.message,
-          hint: error.hint,
-          details: error.details,
-          code: error.code
-        });
+      // Reset all data to show empty state
+      setLeads([]);
 
-        // If table doesn't exist, show empty state
-        if (error.code === '42P01') {
-          console.log('Leads table does not exist yet. Please run the CREATE_LEADS_TABLE.sql script.');
-          setLeads([]);
-          return;
-        }
-
-        throw error;
-      }
-
-      setLeads(data || []);
     } catch (error) {
       console.error('Error fetching recent leads:', error);
-      // Set empty array on any error to prevent UI crashes
       setLeads([]);
     } finally {
       setIsLoading(false);
@@ -127,7 +104,7 @@ const RecentLeads: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-[500px] flex flex-col">
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Leads</h3>
@@ -140,9 +117,9 @@ const RecentLeads: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-6 flex-1 overflow-hidden flex flex-col">
         {leads.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="text-center py-8 flex-1 flex flex-col justify-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -155,7 +132,7 @@ const RecentLeads: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto flex-1">
             {leads.map((lead) => (
               <div key={lead.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors space-y-2 sm:space-y-0">
                 <div className="flex items-start space-x-3 flex-1 min-w-0">

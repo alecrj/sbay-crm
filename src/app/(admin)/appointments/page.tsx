@@ -18,6 +18,7 @@ interface Appointment {
   reminder_24h_sent: boolean;
   reminder_2h_sent: boolean;
   created_at: string;
+  property_id?: string;
   leads: {
     id: string;
     name: string;
@@ -25,6 +26,17 @@ interface Appointment {
     phone: string;
     company: string;
   };
+  property_calendars?: {
+    property_id: string;
+    property_title: string;
+    property_county: string;
+  };
+}
+
+interface Property {
+  id: string;
+  title: string;
+  county: string;
 }
 
 export default function AppointmentsPage() {
@@ -35,6 +47,8 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('upcoming'); // 'all', 'upcoming', 'today', 'past'
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'scheduled', 'confirmed', 'completed', 'cancelled'
+  const [propertyFilter, setPropertyFilter] = useState('all'); // 'all' or property id
+  const [properties, setProperties] = useState<Property[]>([]);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [rescheduleAppointment, setRescheduleAppointment] = useState<Appointment | null>(null);
   const [rescheduleForm, setRescheduleForm] = useState({
@@ -51,6 +65,7 @@ export default function AppointmentsPage() {
 
   useEffect(() => {
     loadAppointments();
+    loadProperties();
   }, []);
 
   const loadAppointments = async () => {
@@ -61,6 +76,11 @@ export default function AppointmentsPage() {
           *,
           leads (
             id, name, email, phone, company
+          ),
+          property_calendars (
+            property_id,
+            property_title,
+            property_county
           )
         `)
         .order('start_time', { ascending: true });
@@ -77,6 +97,25 @@ export default function AppointmentsPage() {
       setAppointments([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProperties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, title, county')
+        .order('county', { ascending: true })
+        .order('title', { ascending: true });
+
+      if (error) {
+        console.error('Error loading properties:', error);
+        return;
+      }
+
+      setProperties(data || []);
+    } catch (error) {
+      console.error('Error loading properties:', error);
     }
   };
 
@@ -211,6 +250,11 @@ export default function AppointmentsPage() {
       filtered = filtered.filter(apt => apt.status === statusFilter);
     }
 
+    // Apply property filter
+    if (propertyFilter !== 'all') {
+      filtered = filtered.filter(apt => apt.property_id === propertyFilter);
+    }
+
     return filtered;
   };
 
@@ -298,7 +342,7 @@ export default function AppointmentsPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Time Filter
@@ -328,6 +372,31 @@ export default function AppointmentsPage() {
                 <option value="confirmed">Confirmed</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Property Filter
+              </label>
+              <select
+                value={propertyFilter}
+                onChange={(e) => setPropertyFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Properties</option>
+                {/* Group properties by county */}
+                {Array.from(new Set(properties.map(p => p.county))).sort().map(county => (
+                  <optgroup key={county} label={county}>
+                    {properties
+                      .filter(p => p.county === county)
+                      .map(property => (
+                        <option key={property.id} value={property.id}>
+                          {property.title}
+                        </option>
+                      ))
+                    }
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>
@@ -393,6 +462,12 @@ export default function AppointmentsPage() {
                           <p className="text-sm text-gray-600 mb-1">
                             <strong>Location:</strong> {appointment.location}
                           </p>
+                          {appointment.property_calendars && (
+                            <p className="text-sm text-gray-600 mb-1">
+                              <strong>Property:</strong> {appointment.property_calendars.property_title}
+                              <span className="text-gray-400 ml-1">({appointment.property_calendars.property_county})</span>
+                            </p>
+                          )}
                         </div>
                       </div>
 

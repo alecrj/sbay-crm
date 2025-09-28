@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAvailableTimeSlots } from '@/lib/google-calendar';
+import { getAvailableTimeSlots } from '@/lib/property-availability';
+import { supabase } from '@/lib/supabase';
 
 // CORS headers for cross-origin requests from the public website
 const corsHeaders = {
@@ -15,33 +16,24 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    // Validate API key if provided
-    const apiKey = request.headers.get('x-api-key');
-    const expectedApiKey = process.env.PUBLIC_API_KEY;
-
-    if (expectedApiKey && apiKey !== expectedApiKey) {
-      return NextResponse.json(
-        { error: 'Invalid API key' },
-        { status: 401, headers: corsHeaders }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
-    const dateString = searchParams.get('date');
-    const durationString = searchParams.get('duration') || '60';
+    const propertyId = searchParams.get('propertyId');
+    const date = searchParams.get('date');
+    const duration = parseInt(searchParams.get('duration') || '60');
 
-    if (!dateString) {
+    // Validate required parameters
+    if (!propertyId || !date) {
       return NextResponse.json(
-        { error: 'Date parameter is required (YYYY-MM-DD format)' },
+        { error: 'propertyId and date are required parameters' },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // Parse and validate date
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
+    // Validate date format
+    const appointmentDate = new Date(date);
+    if (isNaN(appointmentDate.getTime())) {
       return NextResponse.json(
-        { error: 'Invalid date format. Use YYYY-MM-DD.' },
+        { error: 'Invalid date format. Use YYYY-MM-DD' },
         { status: 400, headers: corsHeaders }
       );
     }
@@ -49,77 +41,76 @@ export async function GET(request: NextRequest) {
     // Check if date is in the past
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (date < today) {
+    appointmentDate.setHours(0, 0, 0, 0);
+
+    if (appointmentDate < today) {
       return NextResponse.json(
-        { error: 'Cannot get availability for past dates' },
+        { error: 'Cannot book appointments for past dates' },
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // Parse duration
-    const duration = parseInt(durationString);
-    if (isNaN(duration) || duration < 15 || duration > 480) {
+    // Verify property exists
+    const { data: property, error: propertyError } = await supabase
+      .from('property_calendars')
+      .select('id, property_title, is_active')
+      .eq('property_id', propertyId)
+      .single();
+
+    if (propertyError || !property) {
       return NextResponse.json(
-        { error: 'Duration must be between 15 and 480 minutes' },
-        { status: 400, headers: corsHeaders }
+        { error: 'Property not found or no calendar configured' },
+        { status: 404, headers: corsHeaders }
       );
     }
 
-    // Get business hours from settings or use defaults
-    const businessHours = {
-      start: 9, // 9 AM
-      end: 17,  // 5 PM
-    };
+    if (!property.is_active) {
+      return NextResponse.json(
+        {
+          error: 'Property calendar is currently inactive',
+          available_slots: []
+        },
+        { status: 200, headers: corsHeaders }
+      );
+    }
 
     // Get available time slots
-    const availableSlots = await getAvailableTimeSlots(date, duration, businessHours);
+    const slots = await getAvailableTimeSlots(propertyId, date, duration);
 
     // Format slots for frontend consumption
-    const formattedSlots = availableSlots.map(slot => ({
-      datetime: slot.toISOString(),
-      time: slot.toLocaleTimeString('en-US', {
+    const formattedSlots = slots.map(slot => ({
+      start: slot.start.toISOString(),
+      end: slot.end.toISOString(),
+      display_time: slot.start.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true,
+        hour12: true
       }),
-      timestamp: slot.getTime(),
+      duration: duration
     }));
-
-    // Group slots by time periods
-    const groupedSlots = {
-      morning: formattedSlots.filter(slot => {
-        const hour = new Date(slot.datetime).getHours();
-        return hour >= 9 && hour < 12;
-      }),
-      afternoon: formattedSlots.filter(slot => {
-        const hour = new Date(slot.datetime).getHours();
-        return hour >= 12 && hour < 17;
-      }),
-    };
 
     return NextResponse.json(
       {
         success: true,
-        date: dateString,
-        duration: duration,
-        businessHours: {
-          start: `${businessHours.start}:00`,
-          end: `${businessHours.end}:00`,
+        property: {
+          id: propertyId,
+          title: property.property_title,
+          is_active: property.is_active
         },
-        totalAvailable: formattedSlots.length,
-        slots: formattedSlots,
-        groupedSlots,
-        timezone: 'America/New_York',
+        date: date,
+        duration: duration,
+        available_slots: formattedSlots,
+        total_slots: formattedSlots.length
       },
       { status: 200, headers: corsHeaders }
     );
 
   } catch (error) {
-    console.error('Error getting appointment availability:', error);
+    console.error('Error fetching availability:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: 'Failed to get appointment availability'
+        message: 'Failed to fetch availability'
       },
       { status: 500, headers: corsHeaders }
     );

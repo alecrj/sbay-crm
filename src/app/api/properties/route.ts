@@ -53,6 +53,50 @@ export async function POST(request: NextRequest) {
       }, { status: 403 })
     }
 
+    // Auto-create property calendar for the new property
+    try {
+      const calendarData = {
+        property_id: fullPropertyData.id,
+        property_title: fullPropertyData.title,
+        property_size: fullPropertyData.size,
+        property_county: fullPropertyData.county,
+        is_active: true,
+        timezone: 'America/New_York'
+      };
+
+      const { error: calendarError } = await supabaseAdmin
+        .from('property_calendars')
+        .insert([calendarData]);
+
+      if (calendarError) {
+        console.error('Error creating property calendar:', calendarError);
+        // Don't fail the property creation if calendar creation fails
+      } else {
+        // Create default business hours (Mon-Fri 9AM-5PM)
+        const defaultAvailability = [];
+        for (let day = 1; day <= 5; day++) { // Monday to Friday
+          defaultAvailability.push({
+            property_id: fullPropertyData.id,
+            day_of_week: day,
+            start_time: '09:00:00',
+            end_time: '17:00:00',
+            is_available: true
+          });
+        }
+
+        const { error: availabilityError } = await supabaseAdmin
+          .from('calendar_availability')
+          .insert(defaultAvailability);
+
+        if (availabilityError) {
+          console.error('Error creating default availability:', availabilityError);
+        }
+      }
+    } catch (calendarCreationError) {
+      console.error('Error in calendar auto-creation:', calendarCreationError);
+      // Don't fail the property creation if calendar creation fails
+    }
+
     // Trigger website rebuild webhook
     try {
       const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;

@@ -22,40 +22,11 @@ const LeadPipelineSummary: React.FC = () => {
   const fetchPipelineData = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from('leads')
-        .select('status');
 
-      if (error) throw error;
+      // Reset all data to show empty state
+      setTotalLeads(0);
+      setPipelineData([]);
 
-      const leads = data || [];
-      const total = leads.length;
-      setTotalLeads(total);
-
-      // Count leads by status
-      const statusCounts: Record<string, number> = {};
-      leads.forEach(lead => {
-        statusCounts[lead.status] = (statusCounts[lead.status] || 0) + 1;
-      });
-
-      // Define pipeline stages with colors
-      const stages = [
-        { status: 'new', label: 'New Leads', color: 'bg-blue-500' },
-        { status: 'contacted', label: 'Contacted', color: 'bg-yellow-500' },
-        { status: 'qualified', label: 'Qualified', color: 'bg-purple-500' },
-        { status: 'proposal-sent', label: 'Proposal Sent', color: 'bg-orange-500' },
-        { status: 'closed-won', label: 'Closed Won', color: 'bg-green-500' },
-        { status: 'closed-lost', label: 'Closed Lost', color: 'bg-red-500' },
-      ];
-
-      const pipeline = stages.map(stage => ({
-        status: stage.label,
-        count: statusCounts[stage.status] || 0,
-        percentage: total > 0 ? Math.round(((statusCounts[stage.status] || 0) / total) * 100) : 0,
-        color: stage.color,
-      }));
-
-      setPipelineData(pipeline);
     } catch (error) {
       console.error('Error fetching pipeline data:', error);
     } finally {
@@ -80,7 +51,7 @@ const LeadPipelineSummary: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 h-[500px] flex flex-col">
       <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
           <div>
@@ -98,9 +69,9 @@ const LeadPipelineSummary: React.FC = () => {
         </div>
       </div>
 
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 flex-1 overflow-hidden flex flex-col">
         {totalLeads === 0 ? (
-          <div className="text-center py-8">
+          <div className="text-center py-8 flex-1 flex flex-col justify-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -113,7 +84,7 @@ const LeadPipelineSummary: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto flex-1">
             {pipelineData.map((stage, index) => (
               <div key={stage.status} className="space-y-2">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-1 sm:space-y-0">

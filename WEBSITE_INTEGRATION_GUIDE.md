@@ -17,7 +17,7 @@ Your CRM provides these endpoints for website integration:
 ### **3. Book Appointments**
 **Endpoint**: `POST /api/public/appointments`
 
-### **4. Check Appointment Availability**
+### **4. Check Appointment Availability (Property-Specific)**
 **Endpoint**: `GET /api/public/appointments/availability`
 
 ---
@@ -168,15 +168,14 @@ fetch('/api/public/properties?limit=10')
   <input type="email" name="email" placeholder="Email" required>
   <input type="tel" name="phone" placeholder="Phone Number">
   <input type="text" name="company" placeholder="Company">
+  <select name="propertyId" required>
+    <option value="">Select Property</option>
+    <!-- Populate with properties from API -->
+  </select>
   <input type="date" name="appointmentDate" required>
   <select name="appointmentTime" required>
     <option value="">Select Time</option>
-    <option value="09:00">9:00 AM</option>
-    <option value="10:00">10:00 AM</option>
-    <option value="11:00">11:00 AM</option>
-    <option value="14:00">2:00 PM</option>
-    <option value="15:00">3:00 PM</option>
-    <option value="16:00">4:00 PM</option>
+    <!-- Populate with available times from availability API -->
   </select>
   <select name="location">
     <option value="Office Meeting">Office Meeting</option>
@@ -207,6 +206,7 @@ document.getElementById('appointment-form').addEventListener('submit', async (e)
         email: data.email,
         phone: data.phone,
         company: data.company,
+        propertyId: data.propertyId,
         appointmentDate: data.appointmentDate,
         appointmentTime: data.appointmentTime,
         location: data.location,
@@ -227,6 +227,43 @@ document.getElementById('appointment-form').addEventListener('submit', async (e)
   } catch (error) {
     console.error('Error:', error);
     alert('Sorry, there was an error booking your appointment. Please try again.');
+  }
+});
+
+// Example: Load available time slots when property or date changes
+async function loadAvailableTimeSlots(propertyId, date) {
+  try {
+    const response = await fetch(`https://sbaycrm.netlify.app/api/public/appointments/availability?propertyId=${propertyId}&date=${date}`);
+    const data = await response.json();
+
+    if (data.success) {
+      const timeSelect = document.querySelector('[name="appointmentTime"]');
+      timeSelect.innerHTML = '<option value="">Select Time</option>';
+
+      data.available_slots.forEach(slot => {
+        const option = document.createElement('option');
+        option.value = slot.start.split('T')[1].substring(0, 5); // Extract HH:MM format
+        option.textContent = slot.display_time;
+        timeSelect.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading time slots:', error);
+  }
+}
+
+// Update time slots when property or date changes
+document.querySelector('[name="propertyId"]').addEventListener('change', (e) => {
+  const date = document.querySelector('[name="appointmentDate"]').value;
+  if (e.target.value && date) {
+    loadAvailableTimeSlots(e.target.value, date);
+  }
+});
+
+document.querySelector('[name="appointmentDate"]').addEventListener('change', (e) => {
+  const propertyId = document.querySelector('[name="propertyId"]').value;
+  if (propertyId && e.target.value) {
+    loadAvailableTimeSlots(propertyId, e.target.value);
   }
 });
 ```

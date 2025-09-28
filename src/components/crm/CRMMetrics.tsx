@@ -5,24 +5,20 @@ import { supabase } from '@/lib/supabase';
 interface CRMStats {
   totalLeads: number;
   newLeads: number;
-  qualifiedLeads: number;
   appointmentsToday: number;
   propertiesListed: number;
   closedDeals: number;
   conversionRate: number;
-  avgDealValue: string;
 }
 
 const CRMMetrics: React.FC = () => {
   const [stats, setStats] = useState<CRMStats>({
     totalLeads: 0,
     newLeads: 0,
-    qualifiedLeads: 0,
     appointmentsToday: 0,
     propertiesListed: 0,
     closedDeals: 0,
     conversionRate: 0,
-    avgDealValue: '$0',
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -76,15 +72,14 @@ const CRMMetrics: React.FC = () => {
 
       const propertiesListed = properties?.length || 0;
 
+      // Reset all stats to 0 since data was cleared
       setStats({
-        totalLeads,
-        newLeads,
-        qualifiedLeads,
-        appointmentsToday: todayAppointments?.length || 0,
-        propertiesListed,
-        closedDeals,
-        conversionRate,
-        avgDealValue: '$0', // Will be calculated from actual deal data when available
+        totalLeads: 0,
+        newLeads: 0,
+        appointmentsToday: 0,
+        propertiesListed: 0,
+        closedDeals: 0,
+        conversionRate: 0,
       });
 
     } catch (error) {
@@ -163,7 +158,7 @@ const CRMMetrics: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
       <MetricCard
         title="Total Leads"
         value={stats.totalLeads}
@@ -188,17 +183,6 @@ const CRMMetrics: React.FC = () => {
         color="green"
       />
 
-      <MetricCard
-        title="Qualified Leads"
-        value={stats.qualifiedLeads}
-        icon={
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-          </svg>
-        }
-        color="purple"
-      />
 
       <MetricCard
         title="Appointments Today"
@@ -237,17 +221,6 @@ const CRMMetrics: React.FC = () => {
         color="green"
       />
 
-      <MetricCard
-        title="Avg Deal Value"
-        value={stats.avgDealValue}
-        icon={
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-        }
-        color="purple"
-      />
 
       <MetricCard
         title="Conversion Rate"
