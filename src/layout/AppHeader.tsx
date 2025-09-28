@@ -83,16 +83,14 @@ const AppHeader: React.FC = () => {
             {/* Cross Icon */}
           </button>
 
-          <Link href="/" className="lg:hidden flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ar</span>
-            </div>
-            <div>
-              <div className="text-lg font-bold text-gray-900 dark:text-white">
-                alecrj software
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 -mt-1">Professional CRM</div>
-            </div>
+          <Link href="/" className="lg:hidden flex items-center justify-center">
+            <Image
+              src="/alecrj.png"
+              alt="ALECRJ Design"
+              width={100}
+              height={35}
+              className="object-contain"
+            />
           </Link>
 
           <button

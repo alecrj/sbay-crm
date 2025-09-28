@@ -322,28 +322,18 @@ const AppSidebar: React.FC = () => {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`py-8 flex  ${
+        className={`py-2 px-2 flex  ${
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
         }`}
       >
-        <Link href="/" className="flex items-center space-x-2">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <>
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">ar</span>
-              </div>
-              <div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">
-                  alecrj software
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 -mt-1">Professional CRM</div>
-              </div>
-            </>
-          ) : (
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">ar</span>
-            </div>
-          )}
+        <Link href="/" className="flex items-center justify-center w-full">
+          <Image
+            src="/alecrj.png"
+            alt="ALECRJ Design"
+            width={isExpanded || isHovered || isMobileOpen ? 140 : 40}
+            height={isExpanded || isHovered || isMobileOpen ? 50 : 40}
+            className="object-contain"
+          />
         </Link>
       </div>
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
