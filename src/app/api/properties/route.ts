@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       featured: rawPropertyData.featured !== undefined ? rawPropertyData.featured : false
     }
 
+    console.log('Raw property data received:', rawPropertyData)
     console.log('Cleaned property data:', propertyData)
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
