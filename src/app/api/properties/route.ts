@@ -73,25 +73,6 @@ export async function POST(request: NextRequest) {
         details: errorData
       }, { status: response.status })
     }
-
-    // Trigger website rebuild webhook
-    try {
-      const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;
-      if (webhookUrl) {
-        console.log('Triggering website rebuild...');
-        fetch(webhookUrl, { method: 'POST' }).catch(err =>
-          console.error('Webhook failed:', err)
-        );
-      }
-    } catch (error) {
-      console.error('Webhook error:', error);
-    }
-
-    return NextResponse.json({
-      success: true,
-      property: data[0],
-      message: 'Property and calendar created successfully (fallback method)'
-    })
   } catch (error: any) {
     console.error('API error:', error)
     return NextResponse.json({
