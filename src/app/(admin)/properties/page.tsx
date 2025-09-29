@@ -321,24 +321,43 @@ export default function PropertiesPage() {
       };
 
       if (editingProperty) {
-        const { error } = await supabase
-          .from('properties')
-          .update({
-            ...propertyData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingProperty.id);
+        console.log('✏️ Updating property via API...');
 
-        if (error) throw error;
+        const response = await fetch(`/api/properties?id=${editingProperty.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(propertyData)
+        });
+
+        const result = await response.json();
+        console.log('🔥 Update API response:', { status: response.status, result });
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to update property');
+        }
+
+        console.log('✅ Property updated successfully via API');
       } else {
-        console.log('➕ Inserting new property...');
-        const { data, error } = await supabase
-          .from('properties')
-          .insert([propertyData])
-          .select();
+        console.log('➕ Creating new property with calendar via API...');
 
-        console.log('💾 Insert result:', { data, error });
-        if (error) throw error;
+        const response = await fetch('/api/properties', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(propertyData)
+        });
+
+        const result = await response.json();
+        console.log('🔥 API response:', { status: response.status, result });
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create property');
+        }
+
+        console.log('✅ Property and calendar created successfully via API');
       }
 
       console.log('✅ Property saved successfully');
@@ -395,12 +414,20 @@ export default function PropertiesPage() {
     if (!confirm('Are you sure you want to delete this property?')) return;
 
     try {
-      const { error } = await supabase
-        .from('properties')
-        .delete()
-        .eq('id', id);
+      console.log('🗑️ Deleting property and calendar via API...');
 
-      if (error) throw error;
+      const response = await fetch(`/api/properties?id=${id}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+      console.log('🔥 Delete API response:', { status: response.status, result });
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete property');
+      }
+
+      console.log('✅ Property and calendar deleted successfully via API');
       await loadProperties();
     } catch (error) {
       console.error('Error deleting property:', error);
