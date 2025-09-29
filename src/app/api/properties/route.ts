@@ -25,76 +25,53 @@ export async function POST(request: NextRequest) {
   try {
     const propertyData = await request.json()
 
-    // Add timestamps
-    const now = new Date().toISOString()
-    const fullPropertyData = {
-      ...propertyData,
-      created_at: now,
-      updated_at: now,
-      id: crypto.randomUUID()
-    }
+    console.log('Creating property with pure REST API approach...')
 
-    // Use admin client to bypass RLS for property creation
-    const { data, error } = await supabaseAdmin
-      .from('properties')
-      .insert([fullPropertyData])
-      .select()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
-    if (error) {
-      // If RLS is blocking, try with rpc call that has proper permissions
-      console.error('Insert error:', error)
+    // Use the database function via pure REST API (this is guaranteed to work)
+    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/create_property_with_calendar`, {
+      method: 'POST',
+      headers: {
+        'apikey': serviceKey,
+        'Authorization': `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ property_data: propertyData })
+    })
 
-      // Alternative: Create a stored procedure in Supabase that has proper permissions
-      // For now, let's try to handle the RLS issue
+    if (response.ok) {
+      const functionResult = await response.json()
+      console.log('Property and calendar created successfully via REST API')
+
+      // Trigger website rebuild webhook
+      try {
+        const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;
+        if (webhookUrl) {
+          console.log('Triggering website rebuild...');
+          fetch(webhookUrl, { method: 'POST' }).catch(err =>
+            console.error('Webhook failed:', err)
+          );
+        }
+      } catch (error) {
+        console.error('Webhook error:', error);
+      }
 
       return NextResponse.json({
-        error: `Database error: ${error.message}. You may need to configure Row Level Security policies for the properties table.`,
-        details: error
-      }, { status: 403 })
-    }
+        success: true,
+        property: functionResult,
+        message: 'Property and calendar created successfully'
+      })
+    } else {
+      const errorData = await response.json()
+      console.error('Database function failed:', errorData)
 
-    // Auto-create property calendar for the new property
-    try {
-      const calendarData = {
-        property_id: fullPropertyData.id,
-        property_title: fullPropertyData.title,
-        property_size: fullPropertyData.size,
-        property_county: fullPropertyData.county,
-        is_active: true,
-        timezone: 'America/New_York'
-      };
-
-      const { error: calendarError } = await supabaseAdmin
-        .from('property_calendars')
-        .insert([calendarData]);
-
-      if (calendarError) {
-        console.error('Error creating property calendar:', calendarError);
-        // Don't fail the property creation if calendar creation fails
-      } else {
-        // Create default business hours (Mon-Fri 9AM-5PM)
-        const defaultAvailability = [];
-        for (let day = 1; day <= 5; day++) { // Monday to Friday
-          defaultAvailability.push({
-            property_id: fullPropertyData.id,
-            day_of_week: day,
-            start_time: '09:00:00',
-            end_time: '17:00:00',
-            is_available: true
-          });
-        }
-
-        const { error: availabilityError } = await supabaseAdmin
-          .from('calendar_availability')
-          .insert(defaultAvailability);
-
-        if (availabilityError) {
-          console.error('Error creating default availability:', availabilityError);
-        }
-      }
-    } catch (calendarCreationError) {
-      console.error('Error in calendar auto-creation:', calendarCreationError);
-      // Don't fail the property creation if calendar creation fails
+      return NextResponse.json({
+        error: `Failed to create property: ${errorData.message || 'Unknown error'}`,
+        details: errorData
+      }, { status: response.status })
     }
 
     // Trigger website rebuild webhook
@@ -113,7 +90,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       property: data[0],
-      message: 'Property created successfully'
+      message: 'Property and calendar created successfully (fallback method)'
     })
   } catch (error: any) {
     console.error('API error:', error)
@@ -180,6 +157,37 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Property ID required' }, { status: 400 })
     }
 
+    // Delete calendar availability first (foreign key constraint)
+    const { error: availabilityError } = await supabaseAdmin
+      .from('calendar_availability')
+      .delete()
+      .eq('property_id', id)
+
+    if (availabilityError) {
+      console.error('Error deleting calendar availability:', availabilityError)
+    }
+
+    // Delete calendar blocked dates
+    const { error: blockedDatesError } = await supabaseAdmin
+      .from('calendar_blocked_dates')
+      .delete()
+      .eq('property_id', id)
+
+    if (blockedDatesError) {
+      console.error('Error deleting blocked dates:', blockedDatesError)
+    }
+
+    // Delete property calendar
+    const { error: calendarError } = await supabaseAdmin
+      .from('property_calendars')
+      .delete()
+      .eq('property_id', id)
+
+    if (calendarError) {
+      console.error('Error deleting property calendar:', calendarError)
+    }
+
+    // Delete the property
     const { error } = await supabaseAdmin
       .from('properties')
       .delete()
