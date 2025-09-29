@@ -45,6 +45,20 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+    // Debug logging for authentication
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!serviceKey,
+      serviceKeyLength: serviceKey?.length || 0
+    })
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('Missing environment variables:', { supabaseUrl: !!supabaseUrl, serviceKey: !!serviceKey })
+      return NextResponse.json({
+        error: 'Server configuration error: Missing database credentials'
+      }, { status: 500 })
+    }
+
     // Use the database function via pure REST API (this is guaranteed to work)
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/create_property_with_calendar`, {
       method: 'POST',
@@ -57,9 +71,11 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ property_data: propertyData })
     })
 
+    console.log('Database function response status:', response.status, response.statusText)
+
     if (response.ok) {
       const functionResult = await response.json()
-      console.log('Property and calendar created successfully via REST API')
+      console.log('Property and calendar created successfully via REST API', { propertyId: functionResult?.id })
 
       // Trigger website rebuild webhook
       try {
@@ -81,11 +97,21 @@ export async function POST(request: NextRequest) {
       })
     } else {
       const errorData = await response.json()
-      console.error('Database function failed:', errorData)
+      console.error('Database function failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorData,
+        requestUrl: `${supabaseUrl}/rest/v1/rpc/create_property_with_calendar`,
+        hasServiceKey: !!serviceKey
+      })
 
       return NextResponse.json({
         error: `Failed to create property: ${errorData.message || 'Unknown error'}`,
-        details: errorData
+        details: errorData,
+        debug: {
+          status: response.status,
+          statusText: response.statusText
+        }
       }, { status: response.status })
     }
   } catch (error: any) {
