@@ -23,9 +23,24 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const propertyData = await request.json()
+    const rawPropertyData = await request.json()
 
     console.log('Creating property with pure REST API approach...')
+
+    // Clean and validate property data
+    const propertyData = {
+      ...rawPropertyData,
+      // Handle empty strings and provide defaults
+      county: rawPropertyData.county?.trim() || 'Miami-Dade',
+      location: rawPropertyData.location?.trim() || `${rawPropertyData.city || 'Miami'}, FL`,
+      city: rawPropertyData.city?.trim() || 'Miami',
+      state: rawPropertyData.state?.trim() || 'FL',
+      type: rawPropertyData.type?.toLowerCase()?.trim() || 'warehouse',
+      available: rawPropertyData.available !== undefined ? rawPropertyData.available : true,
+      featured: rawPropertyData.featured !== undefined ? rawPropertyData.featured : false
+    }
+
+    console.log('Cleaned property data:', propertyData)
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
