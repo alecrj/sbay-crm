@@ -87,7 +87,7 @@ BEGIN
     day_of_week,
     start_time,
     end_time,
-    is_available
+    is_active
   ) VALUES
     (new_property_id, 1, '09:00:00', '17:00:00', true),  -- Monday
     (new_property_id, 2, '09:00:00', '17:00:00', true),  -- Tuesday

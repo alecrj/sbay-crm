@@ -6,73 +6,20 @@ export const dynamic = 'force-dynamic';
 
 export async function POST() {
   try {
-    console.log('Creating calendar database tables...');
+    console.log('Setting up calendar system for existing property...');
 
-    // Create the calendar tables using raw SQL
-    const tableCreationSQL = `
-      -- Create property_calendars table
-      CREATE TABLE IF NOT EXISTS property_calendars (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        property_id VARCHAR(255) UNIQUE NOT NULL,
-        property_title VARCHAR(255) NOT NULL,
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-
-      -- Create calendar_availability table
-      CREATE TABLE IF NOT EXISTS calendar_availability (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        property_id VARCHAR(255) NOT NULL,
-        day_of_week INTEGER NOT NULL CHECK (day_of_week >= 0 AND day_of_week <= 6),
-        start_time TIME NOT NULL,
-        end_time TIME NOT NULL,
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-        UNIQUE(property_id, day_of_week)
-      );
-
-      -- Create calendar_blocked_dates table
-      CREATE TABLE IF NOT EXISTS calendar_blocked_dates (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        calendar_id UUID REFERENCES property_calendars(id) ON DELETE CASCADE,
-        blocked_date DATE NOT NULL,
-        reason VARCHAR(255),
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-      );
-
-      -- Create indexes for better performance
-      CREATE INDEX IF NOT EXISTS idx_property_calendars_property_id ON property_calendars(property_id);
-      CREATE INDEX IF NOT EXISTS idx_calendar_availability_property_id ON calendar_availability(property_id);
-      CREATE INDEX IF NOT EXISTS idx_calendar_availability_day_of_week ON calendar_availability(day_of_week);
-      CREATE INDEX IF NOT EXISTS idx_calendar_blocked_dates_calendar_id ON calendar_blocked_dates(calendar_id);
-      CREATE INDEX IF NOT EXISTS idx_calendar_blocked_dates_date ON calendar_blocked_dates(blocked_date);
-    `;
-
-    // Execute the SQL to create tables
-    const { error: createError } = await supabaseAdmin.rpc('sql', {
-      query: tableCreationSQL
-    });
-
-    if (createError) {
-      console.error('Error creating tables:', createError);
-      return NextResponse.json({ error: 'Failed to create tables', details: createError }, { status: 500 });
-    }
-
-    console.log('Calendar tables created successfully');
-
-    // Now set up calendar data for the actual property
     const propertyId = 'c21cdd24-bfcd-4cec-bff0-9aae187cac1b';
 
-    // 1. Create property calendar
+    // 1. Ensure property calendar exists
     const { data: calendar, error: calendarError } = await supabaseAdmin
       .from('property_calendars')
       .upsert({
         property_id: propertyId,
         property_title: 'property1 new system',
-        is_active: true
+        property_size: '25000 SF',
+        property_county: 'Miami-Dade',
+        is_active: true,
+        timezone: 'America/New_York'
       })
       .select()
       .single();
@@ -83,19 +30,17 @@ export async function POST() {
     }
 
     // 2. Delete any existing availability first
-    const { error: deleteError } = await supabaseAdmin
+    await supabaseAdmin
       .from('calendar_availability')
       .delete()
       .eq('property_id', propertyId);
 
-    if (deleteError) {
-      console.log('Note: No existing availability to delete or error:', deleteError);
-    }
-
-    // 3. Set up availability for Monday, Wednesday, Friday (common business schedule)
+    // 3. Set up default Monday-Friday business hours
     const availabilityEntries = [
       { property_id: propertyId, day_of_week: 1, start_time: '09:00:00', end_time: '17:00:00', is_active: true }, // Monday
+      { property_id: propertyId, day_of_week: 2, start_time: '09:00:00', end_time: '17:00:00', is_active: true }, // Tuesday
       { property_id: propertyId, day_of_week: 3, start_time: '09:00:00', end_time: '17:00:00', is_active: true }, // Wednesday
+      { property_id: propertyId, day_of_week: 4, start_time: '09:00:00', end_time: '17:00:00', is_active: true }, // Thursday
       { property_id: propertyId, day_of_week: 5, start_time: '09:00:00', end_time: '17:00:00', is_active: true }  // Friday
     ];
 
@@ -109,15 +54,15 @@ export async function POST() {
       return NextResponse.json({ error: 'Failed to create availability', details: availabilityError }, { status: 500 });
     }
 
-    console.log('Sample calendar data created');
+    console.log('Calendar configured successfully!');
 
     return NextResponse.json({
       success: true,
-      message: 'Calendar system set up successfully with sample data',
-      tables_created: true,
-      sample_data: {
+      message: 'Calendar system configured successfully for existing property',
+      data: {
         calendar,
-        availability
+        availability,
+        property_id: propertyId
       }
     });
 
