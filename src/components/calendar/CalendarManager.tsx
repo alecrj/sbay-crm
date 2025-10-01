@@ -42,18 +42,16 @@ const CalendarManager: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Fetch appointments directly from Supabase with property information
+      // Fetch appointments with lead and property information
       const { data: appointments, error } = await supabase
         .from('appointments')
         .select(`
           *,
           leads (
-            id, name, email, phone, company
-          ),
-          property_calendars (
-            property_id,
-            property_title,
-            property_county
+            id, name, email, phone, company, property_id,
+            properties (
+              id, title, county
+            )
           )
         `)
         .order('start_time', { ascending: true });
@@ -66,7 +64,7 @@ const CalendarManager: React.FC = () => {
       // Convert appointments to FullCalendar format
       const formattedEvents: FullCalendarEvent[] = (appointments || []).map((appointment) => {
         // Create title with property information
-        const propertyTitle = appointment.property_calendars?.property_title;
+        const propertyTitle = appointment.leads?.properties?.title;
         const displayTitle = propertyTitle
           ? `${appointment.title} @ ${propertyTitle}`
           : appointment.title;
@@ -76,7 +74,7 @@ const CalendarManager: React.FC = () => {
           title: displayTitle,
           start: appointment.start_time,
           end: appointment.end_time,
-          backgroundColor: getEventColor(appointment.title, appointment.status, appointment.property_id),
+          backgroundColor: getEventColor(appointment.title, appointment.status, appointment.leads?.property_id),
           extendedProps: {
             description: appointment.description,
             location: appointment.location,
@@ -88,9 +86,9 @@ const CalendarManager: React.FC = () => {
             leadEmail: appointment.leads?.email,
             leadPhone: appointment.leads?.phone,
             leadCompany: appointment.leads?.company,
-            propertyId: appointment.property_id,
-            propertyTitle: appointment.property_calendars?.property_title,
-            propertyCounty: appointment.property_calendars?.property_county,
+            propertyId: appointment.leads?.property_id,
+            propertyTitle: appointment.leads?.properties?.title,
+            propertyCounty: appointment.leads?.properties?.county,
           }
         };
       });

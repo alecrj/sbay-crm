@@ -68,8 +68,8 @@ export async function checkPropertyAvailability(
     // Check business hours for this day of week
     const { data: availability, error: availabilityError } = await supabase
       .from('calendar_availability')
-      .select('start_time, end_time, is_available')
-      .eq('calendar_id', calendar.id)
+      .select('start_time, end_time, is_active')
+      .eq('property_id', propertyId)
       .eq('day_of_week', dayOfWeek)
       .single();
 
@@ -80,7 +80,7 @@ export async function checkPropertyAvailability(
       };
     }
 
-    if (!availability.is_available) {
+    if (!availability.is_active) {
       return {
         isAvailable: false,
         reason: 'Property is closed on this day'
@@ -165,21 +165,23 @@ export async function getAvailableTimeSlots(
     // Get property calendar and business hours
     const { data: calendarData, error: calendarError } = await supabase
       .from('property_calendars')
-      .select(`
-        id,
-        is_active,
-        calendar_availability!inner(start_time, end_time, is_available)
-      `)
+      .select('id, is_active')
       .eq('property_id', propertyId)
-      .eq('calendar_availability.day_of_week', dayOfWeek)
       .single();
 
     if (calendarError || !calendarData || !calendarData.is_active) {
       return [];
     }
 
-    const availability = calendarData.calendar_availability;
-    if (!availability.is_available) {
+    // Get availability for this day of week
+    const { data: availability, error: availabilityError } = await supabase
+      .from('calendar_availability')
+      .select('start_time, end_time, is_active')
+      .eq('property_id', propertyId)
+      .eq('day_of_week', dayOfWeek)
+      .single();
+
+    if (availabilityError || !availability || !availability.is_active) {
       return [];
     }
 

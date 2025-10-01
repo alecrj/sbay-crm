@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
         }
       }]);
 
-    // Send notification for new lead
+    // Send email notification for new lead
     try {
       const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications`, {
         method: 'POST',
@@ -280,7 +280,37 @@ export async function POST(request: NextRequest) {
         throw new Error(`Notification API returned ${notificationResponse.status}`);
       }
     } catch (notificationError) {
-      console.error('Failed to send notification for new lead:', notificationError);
+      console.error('Failed to send email notification for new lead:', notificationError);
+      // Don't fail the lead creation for notification errors
+    }
+
+    // Create internal CRM notification
+    try {
+      const internalNotificationResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/internal-notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'new_lead',
+          title: `New Lead: ${leadData.name}`,
+          message: `${leadData.name}${leadData.company ? ` from ${leadData.company}` : ''} submitted a ${leadData.type.replace('-', ' ')} via ${leadData.source}`,
+          leadId: newLead.id,
+          actionUrl: `/leads/${newLead.id}`,
+          metadata: {
+            priority: leadData.priority,
+            source: leadData.source,
+            type: leadData.type,
+            property_interest: leadData.property_interest
+          }
+        }),
+      });
+
+      if (!internalNotificationResponse.ok) {
+        console.error('Internal notification API error:', internalNotificationResponse.status);
+      } else {
+        console.log('Internal CRM notification created for new lead:', newLead.id);
+      }
+    } catch (internalNotificationError) {
+      console.error('Failed to create internal notification for new lead:', internalNotificationError);
       // Don't fail the lead creation for notification errors
     }
 

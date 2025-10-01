@@ -34,6 +34,7 @@ const PropertyCalendarsOverview: React.FC = () => {
   const [availability, setAvailability] = useState<CalendarAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchPropertyCalendars();
@@ -67,6 +68,112 @@ const PropertyCalendarsOverview: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to load calendars');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteCalendar = async (calendarId: string) => {
+    if (!confirm('Are you sure you want to delete this orphaned calendar? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(prev => new Set(prev).add(calendarId));
+
+    try {
+      // Delete calendar availability first
+      const { error: availabilityError } = await supabase
+        .from('calendar_availability')
+        .delete()
+        .eq('property_id', properties.find(p => p.id === calendarId)?.property_id);
+
+      if (availabilityError) {
+        console.error('Error deleting availability:', availabilityError);
+      }
+
+      // Delete blocked dates
+      const { error: blockedError } = await supabase
+        .from('calendar_blocked_dates')
+        .delete()
+        .eq('property_id', properties.find(p => p.id === calendarId)?.property_id);
+
+      if (blockedError) {
+        console.error('Error deleting blocked dates:', blockedError);
+      }
+
+      // Delete the calendar itself
+      const { error: calendarError } = await supabase
+        .from('property_calendars')
+        .delete()
+        .eq('id', calendarId);
+
+      if (calendarError) {
+        throw calendarError;
+      }
+
+      // Update local state
+      setProperties(prev => prev.filter(p => p.id !== calendarId));
+
+    } catch (error: any) {
+      console.error('Error deleting calendar:', error);
+      alert('Failed to delete calendar: ' + error.message);
+    } finally {
+      setDeleting(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(calendarId);
+        return newSet;
+      });
+    }
+  };
+
+  const deleteAllCalendars = async () => {
+    if (!confirm(`Are you sure you want to delete ALL ${properties.length} orphaned calendars? This action cannot be undone.`)) {
+      return;
+    }
+
+    // Mark all calendars as deleting
+    setDeleting(new Set(properties.map(p => p.id)));
+
+    try {
+      // Get all property IDs
+      const propertyIds = properties.map(p => p.property_id);
+
+      // Delete all calendar availability
+      const { error: availabilityError } = await supabase
+        .from('calendar_availability')
+        .delete()
+        .in('property_id', propertyIds);
+
+      if (availabilityError) {
+        console.error('Error deleting availability:', availabilityError);
+      }
+
+      // Delete all blocked dates
+      const { error: blockedError } = await supabase
+        .from('calendar_blocked_dates')
+        .delete()
+        .in('property_id', propertyIds);
+
+      if (blockedError) {
+        console.error('Error deleting blocked dates:', blockedError);
+      }
+
+      // Delete all calendars
+      const { error: calendarError } = await supabase
+        .from('property_calendars')
+        .delete()
+        .in('id', properties.map(p => p.id));
+
+      if (calendarError) {
+        throw calendarError;
+      }
+
+      // Clear all properties from state
+      setProperties([]);
+
+    } catch (error: any) {
+      console.error('Error deleting all calendars:', error);
+      alert('Failed to delete calendars: ' + error.message);
+    } finally {
+      setDeleting(new Set());
     }
   };
 
@@ -160,6 +267,15 @@ const PropertyCalendarsOverview: React.FC = () => {
           <span className="text-sm text-gray-500 dark:text-gray-400">
             {properties.length} properties configured
           </span>
+          {properties.length > 0 && (
+            <button
+              onClick={deleteAllCalendars}
+              disabled={deleting.size > 0}
+              className="px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Delete All Orphaned
+            </button>
+          )}
         </div>
       </div>
 
@@ -246,6 +362,23 @@ const PropertyCalendarsOverview: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </Link>
+                    <button
+                      onClick={() => deleteCalendar(property.id)}
+                      disabled={deleting.has(property.id)}
+                      className="px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete Calendar"
+                    >
+                      {deleting.has(property.id) ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
