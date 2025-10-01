@@ -82,16 +82,26 @@ export async function POST() {
       return NextResponse.json({ error: 'Failed to create calendar', details: calendarError }, { status: 500 });
     }
 
-    // 2. Set up availability for Tuesdays only (day 2)
+    // 2. Delete any existing availability first
+    const { error: deleteError } = await supabaseAdmin
+      .from('calendar_availability')
+      .delete()
+      .eq('property_id', propertyId);
+
+    if (deleteError) {
+      console.log('Note: No existing availability to delete or error:', deleteError);
+    }
+
+    // 3. Set up availability for Monday, Wednesday, Friday (common business schedule)
+    const availabilityEntries = [
+      { property_id: propertyId, day_of_week: 1, start_time: '09:00:00', end_time: '17:00:00', is_active: true }, // Monday
+      { property_id: propertyId, day_of_week: 3, start_time: '09:00:00', end_time: '17:00:00', is_active: true }, // Wednesday
+      { property_id: propertyId, day_of_week: 5, start_time: '09:00:00', end_time: '17:00:00', is_active: true }  // Friday
+    ];
+
     const { data: availability, error: availabilityError } = await supabaseAdmin
       .from('calendar_availability')
-      .upsert({
-        property_id: propertyId,
-        day_of_week: 2, // Tuesday
-        start_time: '09:00:00',
-        end_time: '17:00:00',
-        is_active: true
-      })
+      .insert(availabilityEntries)
       .select();
 
     if (availabilityError) {
