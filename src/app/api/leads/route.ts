@@ -11,15 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data, error } = await supabase
       .from('leads')
-      .select(`
-        *,
-        property_calendars (
-          property_id,
-          property_title,
-          property_size,
-          property_county
-        )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
