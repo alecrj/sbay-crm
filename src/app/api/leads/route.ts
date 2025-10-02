@@ -76,3 +76,45 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const url = new URL(request.url);
+    const leadId = url.searchParams.get('id');
+
+    if (!leadId) {
+      return NextResponse.json(
+        { error: 'Lead ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // First delete related activities
+    await supabase
+      .from('lead_activities')
+      .delete()
+      .eq('lead_id', leadId);
+
+    // Then delete the lead
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .eq('id', leadId);
+
+    if (error) {
+      console.error('Error deleting lead:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete lead' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting lead:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

@@ -26,11 +26,6 @@ interface Appointment {
     phone: string;
     company: string;
   };
-  property_calendars?: {
-    property_id: string;
-    property_title: string;
-    property_county: string;
-  };
 }
 
 interface Property {
@@ -70,28 +65,21 @@ export default function AppointmentsPage() {
 
   const loadAppointments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select(`
-          *,
-          leads (
-            id, name, email, phone, company
-          ),
-          property_calendars (
-            property_id,
-            property_title,
-            property_county
-          )
-        `)
-        .order('start_time', { ascending: true });
+      const response = await fetch('/api/appointments');
 
-      if (error) {
-        console.error('Error loading appointments:', error);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        console.error('API error loading appointments:', result.error);
         setAppointments([]);
         return;
       }
 
-      setAppointments(data || []);
+      setAppointments(result.data || []);
     } catch (error) {
       console.error('Error loading appointments:', error);
       setAppointments([]);
@@ -102,31 +90,58 @@ export default function AppointmentsPage() {
 
   const loadProperties = async () => {
     try {
-      const { data, error } = await supabase
-        .from('properties')
-        .select('id, title, county')
-        .order('county', { ascending: true })
-        .order('title', { ascending: true });
+      const response = await fetch('/api/properties');
 
-      if (error) {
-        console.error('Error loading properties:', error);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        console.error('API error loading properties:', result.error);
+        setProperties([]);
         return;
       }
 
-      setProperties(data || []);
+      // Sort properties by county then title
+      const sortedProperties = (result.properties || []).sort((a: Property, b: Property) => {
+        if (a.county !== b.county) {
+          return a.county.localeCompare(b.county);
+        }
+        return a.title.localeCompare(b.title);
+      });
+
+      setProperties(sortedProperties);
     } catch (error) {
       console.error('Error loading properties:', error);
+      setProperties([]);
     }
   };
 
   const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status: newStatus })
-        .eq('id', appointmentId);
+      const response = await fetch('/api/appointments', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          appointmentId,
+          status: newStatus
+        })
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        console.error('API error updating appointment status:', result.error);
+        return;
+      }
 
       // Update local state
       setAppointments(prev =>
@@ -136,24 +151,6 @@ export default function AppointmentsPage() {
             : apt
         )
       );
-
-      // Log activity
-      const appointment = appointments.find(apt => apt.id === appointmentId);
-      if (appointment) {
-        await supabase
-          .from('lead_activities')
-          .insert([{
-            lead_id: appointment.leads.id,
-            activity_type: 'status_change',
-            title: `Appointment status changed to ${newStatus}`,
-            description: `Appointment "${appointment.title}" status updated from ${appointment.status} to ${newStatus}`,
-            metadata: {
-              appointment_id: appointmentId,
-              old_status: appointment.status,
-              new_status: newStatus
-            }
-          }]);
-      }
     } catch (error) {
       console.error('Error updating appointment status:', error);
     }
@@ -462,12 +459,6 @@ export default function AppointmentsPage() {
                           <p className="text-sm text-gray-600 mb-1">
                             <strong>Location:</strong> {appointment.location}
                           </p>
-                          {appointment.property_calendars && (
-                            <p className="text-sm text-gray-600 mb-1">
-                              <strong>Property:</strong> {appointment.property_calendars.property_title}
-                              <span className="text-gray-400 ml-1">({appointment.property_calendars.property_county})</span>
-                            </p>
-                          )}
                         </div>
                       </div>
 

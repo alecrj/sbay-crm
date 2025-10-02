@@ -23,12 +23,45 @@ const LeadPipelineSummary: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Reset all data to show empty state
-      setTotalLeads(0);
-      setPipelineData([]);
+      const response = await fetch('/api/leads');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      const leads = result.data || [];
+
+      const totalLeadsCount = leads.length;
+      setTotalLeads(totalLeadsCount);
+
+      // Define pipeline stages based on the LEAD_STATUSES from LeadKanban
+      const stages = [
+        { id: 'new', title: 'Lead Form', color: 'bg-blue-500' },
+        { id: 'tour-scheduled', title: 'Tour Scheduled', color: 'bg-purple-500' },
+        { id: 'canceled-no-show', title: 'Canceled/No Show', color: 'bg-orange-500' },
+        { id: 'showing-completed', title: 'Showing Completed', color: 'bg-yellow-500' },
+        { id: 'won', title: 'Won', color: 'bg-green-500' },
+        { id: 'lost', title: 'Lost', color: 'bg-red-500' },
+      ];
+
+      const pipelineStats = stages.map(stage => {
+        const stageLeads = leads.filter((lead: any) => lead.status === stage.id);
+        const count = stageLeads.length;
+        const percentage = totalLeadsCount > 0 ? Math.round((count / totalLeadsCount) * 100) : 0;
+
+        return {
+          status: stage.title,
+          count,
+          percentage,
+          color: stage.color,
+        };
+      });
+
+      setPipelineData(pipelineStats);
 
     } catch (error) {
       console.error('Error fetching pipeline data:', error);
+      setTotalLeads(0);
+      setPipelineData([]);
     } finally {
       setIsLoading(false);
     }
@@ -118,15 +151,15 @@ const LeadPipelineSummary: React.FC = () => {
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-green-600">
-                    {pipelineData.find(stage => stage.status === 'Closed Won')?.percentage || 0}%
+                    {pipelineData.find(stage => stage.status === 'Won')?.percentage || 0}%
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">Win Rate</div>
                 </div>
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-purple-600">
-                    {pipelineData.find(stage => stage.status === 'Qualified')?.count || 0}
+                    {pipelineData.find(stage => stage.status === 'Tour Scheduled')?.count || 0}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Qualified</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Tours Scheduled</div>
                 </div>
               </div>
             </div>

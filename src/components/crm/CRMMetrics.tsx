@@ -35,10 +35,13 @@ const CRMMetrics: React.FC = () => {
       const todayStr = today.toISOString().split('T')[0];
       const thisMonth = today.toISOString().slice(0, 7);
 
-      // Fetch leads data
-      const { data: leads } = await supabase
-        .from('leads')
-        .select('status, priority, created_at');
+      // Fetch leads data using the API
+      const response = await fetch('/api/leads');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      const leads = result.data || [];
 
       // Fetch appointments for today
       const { data: todayAppointments } = await supabase
@@ -59,12 +62,8 @@ const CRMMetrics: React.FC = () => {
         lead.created_at.startsWith(thisMonth)
       ).length || 0;
 
-      const qualifiedLeads = leads?.filter(lead =>
-        lead.status === 'qualified'
-      ).length || 0;
-
       const closedDeals = leads?.filter(lead =>
-        lead.status === 'closed-won'
+        lead.status === 'won'
       ).length || 0;
 
       const conversionRate = totalLeads > 0 ?
@@ -72,7 +71,19 @@ const CRMMetrics: React.FC = () => {
 
       const propertiesListed = properties?.length || 0;
 
-      // Reset all stats to 0 since data was cleared
+      setStats({
+        totalLeads,
+        newLeads,
+        appointmentsToday: todayAppointments?.length || 0,
+        propertiesListed,
+        closedDeals,
+        conversionRate,
+      });
+
+    } catch (error) {
+      console.error('Error fetching CRM stats:', error);
+
+      // Keep the stats at 0 when API fails, but don't show empty state
       setStats({
         totalLeads: 0,
         newLeads: 0,
@@ -81,9 +92,6 @@ const CRMMetrics: React.FC = () => {
         closedDeals: 0,
         conversionRate: 0,
       });
-
-    } catch (error) {
-      console.error('Error fetching CRM stats:', error);
     } finally {
       setIsLoading(false);
     }

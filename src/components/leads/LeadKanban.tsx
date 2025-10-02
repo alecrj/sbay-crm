@@ -101,6 +101,26 @@ const LeadKanban: React.FC = () => {
     }
   };
 
+  const deleteLead = async (leadId: string) => {
+    if (!isAdmin) return; // Prevent deleting leads for non-admin users
+
+    try {
+      const response = await fetch(`/api/leads?id=${leadId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Update local state
+      setLeads(prev => prev.filter(lead => lead.id !== leadId));
+
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+    }
+  };
+
   const filteredLeads = leads.filter(lead =>
     lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -176,6 +196,7 @@ const LeadKanban: React.FC = () => {
               leads={getLeadsByStatus(status.id)}
               onMoveLead={moveLead}
               onEditLead={handleEditLead}
+              onDeleteLead={deleteLead}
               getPriorityColor={getPriorityColor}
               isAdmin={isAdmin}
             />
@@ -204,6 +225,7 @@ interface KanbanColumnProps {
   leads: Lead[];
   onMoveLead: (leadId: string, newStatus: Lead['status']) => void;
   onEditLead: (lead: Lead) => void;
+  onDeleteLead: (leadId: string) => void;
   getPriorityColor: (priority: Lead['priority']) => string;
   isAdmin: boolean;
 }
@@ -213,6 +235,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   leads,
   onMoveLead,
   onEditLead,
+  onDeleteLead,
   getPriorityColor,
   isAdmin,
 }) => {
@@ -255,6 +278,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             key={lead.id}
             lead={lead}
             onEdit={onEditLead}
+            onDelete={onDeleteLead}
             priorityColor={getPriorityColor(lead.priority)}
             isAdmin={isAdmin}
           />
@@ -273,6 +297,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 interface DraggableLeadCardProps {
   lead: Lead;
   onEdit: (lead: Lead) => void;
+  onDelete: (leadId: string) => void;
   priorityColor: string;
   isAdmin: boolean;
 }
@@ -280,6 +305,7 @@ interface DraggableLeadCardProps {
 const DraggableLeadCard: React.FC<DraggableLeadCardProps> = ({
   lead,
   onEdit,
+  onDelete,
   priorityColor,
   isAdmin,
 }) => {
@@ -300,6 +326,7 @@ const DraggableLeadCard: React.FC<DraggableLeadCardProps> = ({
       <LeadCard
         lead={lead}
         onEdit={onEdit}
+        onDelete={onDelete}
         priorityColor={priorityColor}
         isAdmin={isAdmin}
       />

@@ -27,8 +27,19 @@ const RecentLeads: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Reset all data to show empty state
-      setLeads([]);
+      const response = await fetch('/api/leads');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      const allLeads = result.data || [];
+
+      // Get the 5 most recent leads
+      const recentLeads = allLeads
+        .sort((a: RecentLead, b: RecentLead) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5);
+
+      setLeads(recentLeads);
 
     } catch (error) {
       console.error('Error fetching recent leads:', error);
