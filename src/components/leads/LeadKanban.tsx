@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { supabase, supabaseAdmin, Lead } from "@/lib/supabase";
+import { supabase, Lead } from "@/lib/supabase";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -34,39 +34,20 @@ const LeadKanban: React.FC = () => {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabaseAdmin
-        .from('leads')
-        .select(`
-          *,
-          property_calendars (
-            property_id,
-            property_title,
-            property_size,
-            property_county
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const response = await fetch('/api/leads');
 
-      if (error) {
-        console.error('Supabase error fetching leads:', error);
-        console.error('Error details:', {
-          message: error.message,
-          hint: error.hint,
-          details: error.details,
-          code: error.code
-        });
-
-        // If table doesn't exist, show helpful message
-        if (error.code === '42P01') {
-          console.log('Leads table does not exist yet. Please run the CREATE_LEADS_TABLE.sql script.');
-          setLeads([]);
-          return;
-        }
-
-        throw new Error(`Database error: ${error.message}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      setLeads(data || []);
+      const result = await response.json();
+
+      if (result.error) {
+        console.error('API error fetching leads:', result.error);
+        throw new Error(result.error);
+      }
+
+      setLeads(result.data || []);
     } catch (error) {
       console.error('Error fetching leads:', error);
       console.error('Error details:', {
@@ -98,28 +79,22 @@ const LeadKanban: React.FC = () => {
     if (!isAdmin) return; // Prevent moving leads for non-admin users
 
     try {
-      const { error } = await supabaseAdmin
-        .from('leads')
-        .update({ status: newStatus })
-        .eq('id', leadId);
+      const response = await fetch('/api/leads', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ leadId, status: newStatus }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       // Update local state
       setLeads(prev => prev.map(lead =>
         lead.id === leadId ? { ...lead, status: newStatus } : lead
       ));
-
-      // Log activity
-      await supabaseAdmin
-        .from('lead_activities')
-        .insert([{
-          lead_id: leadId,
-          activity_type: 'status_change',
-          title: 'Status updated',
-          description: `Lead status changed to ${newStatus}`,
-          metadata: { new_status: newStatus }
-        }]);
 
     } catch (error) {
       console.error('Error moving lead:', error);
