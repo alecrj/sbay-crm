@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { supabase, Lead } from "@/lib/supabase";
+import { supabase, supabaseAdmin, Lead } from "@/lib/supabase";
 import { useModal } from "@/hooks/useModal";
 import { Modal } from "@/components/ui/modal";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -34,7 +34,7 @@ const LeadKanban: React.FC = () => {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('leads')
         .select(`
           *,
@@ -98,7 +98,7 @@ const LeadKanban: React.FC = () => {
     if (!isAdmin) return; // Prevent moving leads for non-admin users
 
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('leads')
         .update({ status: newStatus })
         .eq('id', leadId);
@@ -111,7 +111,7 @@ const LeadKanban: React.FC = () => {
       ));
 
       // Log activity
-      await supabase
+      await supabaseAdmin
         .from('lead_activities')
         .insert([{
           lead_id: leadId,

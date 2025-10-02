@@ -217,7 +217,7 @@ Generated at ${new Date().toLocaleString()}`
 
               <div class="highlight-box">
                 <h3 style="margin-top: 0; color: #059669;">📅 Your Appointment Confirmation</h3>
-                <p><strong>Meeting scheduled to discuss:</strong> ${data.propertyInterest || 'Commercial real estate opportunities'}</p>
+                <p><strong>Tour scheduled to discuss:</strong> ${data.propertyInterest || 'Commercial real estate opportunities'}</p>
                 <p>Our team will provide detailed information about available properties and help you find the perfect space for your business needs.</p>
               </div>
 
@@ -242,7 +242,7 @@ Generated at ${new Date().toLocaleString()}`
 
               <p>Questions? Contact us:</p>
               <ul>
-                <li>📱 Call us directly at <strong>(954) 937-9667</strong></li>
+                <li>📱 Call us directly at <strong>(323) 810-7241</strong></li>
                 <li>📧 Reply to this email with any questions</li>
                 <li>🌐 Visit our website for more properties</li>
               </ul>
@@ -277,7 +277,7 @@ What happens next?
 • Next steps: A clear action plan to move forward
 
 ${data.propertyInterest ? `We noted your interest in: ${data.propertyInterest}\nOur team is already preparing relevant market insights and property options that match your criteria.\n\n` : ''}In the meantime, feel free to:
-• Call us directly at (XXX) XXX-XXXX
+• Call us directly at (323) 810-7241
 • Reply to this email with any additional questions
 • Visit our website for more information
 

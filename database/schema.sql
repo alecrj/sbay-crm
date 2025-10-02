@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS leads (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   type VARCHAR(30) NOT NULL CHECK (type IN ('consultation', 'property-inquiry', 'general-inquiry', 'contact-form')),
-  status VARCHAR(20) DEFAULT 'new' CHECK (status IN ('new', 'contacted', 'qualified', 'proposal-sent', 'closed-won', 'closed-lost')),
+  status VARCHAR(20) DEFAULT 'new' CHECK (status IN ('new', 'tour-scheduled', 'canceled-no-show', 'showing-completed', 'won', 'lost')),
   priority VARCHAR(10) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
@@ -196,9 +196,9 @@ CREATE POLICY "Properties are viewable by authenticated users" ON properties
 CREATE POLICY "Authenticated users can manage properties" ON properties
     FOR ALL USING (auth.role() = 'authenticated');
 
--- Leads are viewable by assigned user or admins
+-- Leads are viewable by assigned user, unassigned leads, or admins
 CREATE POLICY "Leads are viewable by assigned user or admins" ON leads
-    FOR SELECT USING (assigned_to = auth.uid() OR
+    FOR SELECT USING (assigned_to = auth.uid() OR assigned_to IS NULL OR
     EXISTS(SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
 
 -- Similar policies for other tables...
