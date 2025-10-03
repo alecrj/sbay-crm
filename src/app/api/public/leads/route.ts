@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       propertyId,
       appointmentDate,
       appointmentTime,
-      source = 'appointment_booking',
+      source = 'website',
       appointment_type = 'consultation',
       ...otherData
     } = data;
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         .from('lead_activities')
         .insert([{
           lead_id: leadResult.id,
-          activity_type: 'appointment_booking',
+          activity_type: 'appointment_booked',
           title: 'Appointment booked',
           description: `Appointment scheduled for ${appointmentDate} at ${appointmentTime}`,
           metadata: {
