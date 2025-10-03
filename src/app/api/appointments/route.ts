@@ -39,24 +39,36 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { appointmentId, status } = await request.json();
+    const { appointmentId, status, property_id } = await request.json();
 
-    if (!appointmentId || !status) {
+    if (!appointmentId) {
       return NextResponse.json(
-        { error: 'Appointment ID and status are required' },
+        { error: 'Appointment ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (property_id !== undefined) updateData.property_id = property_id;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: 'At least one field (status or property_id) must be provided' },
         { status: 400 }
       );
     }
 
     const { error } = await supabase
       .from('appointments')
-      .update({ status })
+      .update(updateData)
       .eq('id', appointmentId);
 
     if (error) {
-      console.error('Error updating appointment status:', error);
+      console.error('Error updating appointment:', error);
       return NextResponse.json(
-        { error: 'Failed to update appointment status' },
+        { error: 'Failed to update appointment' },
         { status: 500 }
       );
     }
