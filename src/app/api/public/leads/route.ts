@@ -60,10 +60,12 @@ export async function POST(request: NextRequest) {
 
     // Create the lead
     const leadData = {
+      title: `${appointment_type} - ${first_name} ${last_name}`,
       name: `${first_name} ${last_name}`,
       email,
       phone,
       property_interest,
+      property_id: propertyId, // Map propertyId to property_id
       source,
       status: 'new',
       type: 'consultation',
@@ -102,7 +104,6 @@ export async function POST(request: NextRequest) {
       end_time: appointmentEndTime.toISOString(),
       lead_id: leadResult.id,
       status: 'scheduled',
-      property_id: propertyId,
       description: property_interest || ''
     };
 
