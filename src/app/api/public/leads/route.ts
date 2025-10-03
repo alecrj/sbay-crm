@@ -67,7 +67,6 @@ export async function POST(request: NextRequest) {
       email,
       phone,
       property_interest,
-      property_id: propertyId, // Map propertyId to property_id
       source,
       status: 'new',
       type: 'consultation',
