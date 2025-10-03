@@ -144,6 +144,9 @@ export async function POST(request: NextRequest) {
 
     // Send confirmation email to client
     try {
+      console.log('Attempting to send client email to:', email);
+      console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
+
       await resend.emails.send({
         from: 'SBAY Real Estate <noreply@sbayrealestate.com>',
         to: [email],
@@ -170,6 +173,9 @@ export async function POST(request: NextRequest) {
 
     // Send notification email to admin
     try {
+      console.log('Attempting to send admin email to:', process.env.ADMIN_EMAIL);
+      console.log('ADMIN_EMAIL exists:', !!process.env.ADMIN_EMAIL);
+
       await resend.emails.send({
         from: 'SBAY Real Estate <noreply@sbayrealestate.com>',
         to: [process.env.ADMIN_EMAIL!],
