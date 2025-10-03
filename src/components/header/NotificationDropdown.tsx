@@ -29,9 +29,10 @@ export default function NotificationDropdown() {
 
   function toggleDropdown() {
     setIsOpen(!isOpen);
-    if (!isOpen) {
-      fetchNotifications();
-    }
+    // Temporarily disabled to prevent production error
+    // if (!isOpen) {
+    //   fetchNotifications();
+    // }
   }
 
   function closeDropdown() {
@@ -116,11 +117,12 @@ export default function NotificationDropdown() {
 
   // Initial load and periodic refresh
   useEffect(() => {
-    fetchNotifications();
+    // Temporarily disabled to prevent production error
+    // fetchNotifications();
 
     // Refresh every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // const interval = setInterval(fetchNotifications, 30000);
+    // return () => clearInterval(interval);
   }, []);
 
   // Format time
