@@ -58,8 +58,17 @@ export async function POST(request: NextRequest) {
       return validationResponse;
     }
 
-    // Create the lead data, filtering out invalid fields
-    const { property_id: invalidPropertyId, ...cleanOtherData } = otherData;
+    // Create the lead data, filtering out all invalid/form-specific fields
+    const {
+      property_id: invalidPropertyId,
+      propertyId: validPropertyId,
+      appointment_date: formAppointmentDate,
+      appointment_time: formAppointmentTime,
+      appointmentDate: cleanAppointmentDate,
+      appointmentTime: cleanAppointmentTime,
+      appointment_type: cleanAppointmentType,
+      ...cleanOtherData
+    } = otherData;
 
     const leadData = {
       title: `${appointment_type} - ${first_name} ${last_name}`,
