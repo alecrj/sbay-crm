@@ -10,6 +10,20 @@ const supabase = createClient(
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+export async function OPTIONS(request: NextRequest) {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
@@ -31,10 +45,17 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!first_name || !last_name || !email || !appointmentDate || !appointmentTime) {
-      return NextResponse.json(
+      const validationResponse = NextResponse.json(
         { error: 'Missing required fields: first_name, last_name, email, appointmentDate, appointmentTime' },
         { status: 400 }
       );
+
+      // Add CORS headers to validation error response
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        validationResponse.headers.set(key, value);
+      });
+
+      return validationResponse;
     }
 
     // Create the lead
@@ -58,10 +79,17 @@ export async function POST(request: NextRequest) {
 
     if (leadError) {
       console.error('Error creating lead:', leadError);
-      return NextResponse.json(
+      const leadErrorResponse = NextResponse.json(
         { error: 'Failed to create lead', details: leadError.message },
         { status: 500 }
       );
+
+      // Add CORS headers to lead error response
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        leadErrorResponse.headers.set(key, value);
+      });
+
+      return leadErrorResponse;
     }
 
     // Create the appointment with proper datetime format
@@ -160,17 +188,31 @@ export async function POST(request: NextRequest) {
         }]);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       lead: leadResult,
       appointment: appointmentResult
     });
 
+    // Add CORS headers
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+
+    return response;
+
   } catch (error) {
     console.error('Error processing appointment booking:', error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
+
+    // Add CORS headers to error response
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      errorResponse.headers.set(key, value);
+    });
+
+    return errorResponse;
   }
 }
