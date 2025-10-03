@@ -249,11 +249,7 @@ export default function AppointmentsPage() {
 
     // Apply property filter
     if (propertyFilter !== 'all') {
-      if (propertyFilter === 'unassigned') {
-        filtered = filtered.filter(apt => apt.property_id === null);
-      } else {
-        filtered = filtered.filter(apt => apt.property_id === propertyFilter);
-      }
+      filtered = filtered.filter(apt => apt.property_id === propertyFilter);
     }
 
     return filtered;
@@ -385,7 +381,6 @@ export default function AppointmentsPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Properties</option>
-                <option value="unassigned">📋 Unassigned</option>
                 {/* Group properties by county */}
                 {Array.from(new Set(properties.map(p => p.county))).sort().map(county => (
                   <optgroup key={county} label={county}>
