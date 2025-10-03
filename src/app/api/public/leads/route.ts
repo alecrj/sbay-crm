@@ -39,13 +39,14 @@ export async function POST(request: NextRequest) {
 
     // Create the lead
     const leadData = {
-      first_name,
-      last_name,
+      name: `${first_name} ${last_name}`,
       email,
       phone,
       property_interest,
       source,
       status: 'new',
+      type: 'consultation',
+      priority: 'medium',
       ...otherData
     };
 
@@ -63,19 +64,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the appointment
+    // Create the appointment with proper datetime format
+    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    const appointmentEndTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+
     const appointmentData = {
-      title: \`\${appointment_type} - \${first_name} \${last_name}\`,
-      date: appointmentDate,
-      time: appointmentTime,
-      client_name: \`\${first_name} \${last_name}\`,
-      client_email: email,
-      client_phone: phone,
-      property_id: propertyId,
+      title: `${appointment_type} - ${first_name} ${last_name}`,
+      start_time: appointmentDateTime.toISOString(),
+      end_time: appointmentEndTime.toISOString(),
       lead_id: leadResult.id,
       status: 'scheduled',
-      type: appointment_type,
-      notes: property_interest || ''
+      property_id: propertyId,
+      description: property_interest || ''
     };
 
     const { data: appointmentResult, error: appointmentError } = await supabase
@@ -95,21 +95,21 @@ export async function POST(request: NextRequest) {
         from: 'SBAY Real Estate <noreply@sbayrealestate.com>',
         to: [email],
         subject: 'Appointment Confirmation - SBAY Real Estate',
-        html: \`
+        html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">Appointment Confirmation</h2>
-            <p>Dear \${first_name} \${last_name},</p>
+            <p>Dear ${first_name} ${last_name},</p>
             <p>Thank you for booking an appointment with SBAY Real Estate. Your appointment has been confirmed for:</p>
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p><strong>Date:</strong> \${new Date(appointmentDate).toLocaleDateString()}</p>
-              <p><strong>Time:</strong> \${appointmentTime}</p>
-              <p><strong>Type:</strong> \${appointment_type}</p>
-              \${property_interest ? \`<p><strong>Property:</strong> \${property_interest}</p>\` : ''}
+              <p><strong>Date:</strong> ${new Date(appointmentDate).toLocaleDateString()}</p>
+              <p><strong>Time:</strong> ${appointmentTime}</p>
+              <p><strong>Type:</strong> ${appointment_type}</p>
+              ${property_interest ? `<p><strong>Property:</strong> ${property_interest}</p>` : ''}
             </div>
             <p>We look forward to meeting with you. If you need to reschedule or have any questions, please contact us at (323) 810-7241.</p>
             <p>Best regards,<br>SBAY Real Estate Team</p>
           </div>
-        \`
+        `
       });
     } catch (emailError) {
       console.error('Error sending client email:', emailError);
@@ -121,22 +121,22 @@ export async function POST(request: NextRequest) {
         from: 'SBAY Real Estate <noreply@sbayrealestate.com>',
         to: [process.env.ADMIN_EMAIL!],
         subject: 'New Appointment Booking',
-        html: \`
+        html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #dc2626;">New Appointment Booking</h2>
             <p>A new appointment has been booked on your website:</p>
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p><strong>Client:</strong> \${first_name} \${last_name}</p>
-              <p><strong>Email:</strong> \${email}</p>
-              <p><strong>Phone:</strong> \${phone || 'Not provided'}</p>
-              <p><strong>Date:</strong> \${new Date(appointmentDate).toLocaleDateString()}</p>
-              <p><strong>Time:</strong> \${appointmentTime}</p>
-              <p><strong>Type:</strong> \${appointment_type}</p>
-              \${property_interest ? \`<p><strong>Property Interest:</strong> \${property_interest}</p>\` : ''}
+              <p><strong>Client:</strong> ${first_name} ${last_name}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+              <p><strong>Date:</strong> ${new Date(appointmentDate).toLocaleDateString()}</p>
+              <p><strong>Time:</strong> ${appointmentTime}</p>
+              <p><strong>Type:</strong> ${appointment_type}</p>
+              ${property_interest ? `<p><strong>Property Interest:</strong> ${property_interest}</p>` : ''}
             </div>
             <p>Please check your CRM dashboard for more details.</p>
           </div>
-        \`
+        `
       });
     } catch (emailError) {
       console.error('Error sending admin email:', emailError);
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
           lead_id: leadResult.id,
           activity_type: 'appointment_booking',
           title: 'Appointment booked',
-          description: \`Appointment scheduled for \${appointmentDate} at \${appointmentTime}\`,
+          description: `Appointment scheduled for ${appointmentDate} at ${appointmentTime}`,
           metadata: {
             appointment_id: appointmentResult?.id,
             date: appointmentDate,
