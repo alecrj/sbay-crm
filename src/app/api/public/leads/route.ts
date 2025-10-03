@@ -148,9 +148,9 @@ export async function POST(request: NextRequest) {
       console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
 
       await resend.emails.send({
-        from: 'SBAY Real Estate <noreply@sbayrealestate.com>',
+        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
         to: [email],
-        subject: 'Appointment Confirmation - SBAY Real Estate',
+        subject: 'Appointment Confirmation - Shallow Bay Advisors',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #2563eb;">Appointment Confirmation</h2>
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       console.log('ADMIN_EMAIL exists:', !!process.env.ADMIN_EMAIL);
 
       await resend.emails.send({
-        from: 'SBAY Real Estate <noreply@sbayrealestate.com>',
+        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
         to: [process.env.ADMIN_EMAIL!],
         subject: 'New Appointment Booking',
         html: `
