@@ -105,7 +105,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the appointment with proper datetime format
-    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    // Convert 12-hour format time to 24-hour format for proper Date parsing
+    const convertTo24Hour = (time12h: string) => {
+      const [time, modifier] = time12h.split(' ');
+      let [hours, minutes] = time.split(':');
+      if (hours === '12') {
+        hours = '00';
+      }
+      if (modifier === 'PM') {
+        hours = (parseInt(hours, 10) + 12).toString();
+      }
+      return `${hours.padStart(2, '0')}:${minutes}`;
+    };
+
+    const time24h = convertTo24Hour(appointmentTime);
+    const appointmentDateTime = new Date(`${appointmentDate}T${time24h}`);
     const appointmentEndTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     const appointmentData = {
