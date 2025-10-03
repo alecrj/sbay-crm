@@ -58,7 +58,9 @@ export async function POST(request: NextRequest) {
       return validationResponse;
     }
 
-    // Create the lead
+    // Create the lead data, filtering out invalid fields
+    const { property_id: invalidPropertyId, ...cleanOtherData } = otherData;
+
     const leadData = {
       title: `${appointment_type} - ${first_name} ${last_name}`,
       name: `${first_name} ${last_name}`,
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       status: 'new',
       type: 'consultation',
       priority: 'medium',
-      ...otherData
+      ...cleanOtherData
     };
 
     const { data: leadResult, error: leadError } = await supabase
