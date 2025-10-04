@@ -41,7 +41,6 @@ export interface LeadMapping {
   timeline?: number;
   message?: number;
   source?: number;
-  priority?: number;
   status?: number;
   type?: number;
   consultation_date?: number;

@@ -46,7 +46,6 @@ const GoogleSheetsImport: React.FC = () => {
     { key: 'timeline', label: 'Timeline', required: false },
     { key: 'message', label: 'Message/Notes', required: false },
     { key: 'source', label: 'Source', required: false },
-    { key: 'priority', label: 'Priority', required: false },
     { key: 'status', label: 'Status', required: false },
     { key: 'type', label: 'Type', required: false },
     { key: 'consultation_date', label: 'Consultation Date', required: false },
