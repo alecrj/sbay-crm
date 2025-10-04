@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processPendingNotifications } from '@/lib/notification-scheduler';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NotificationConfig } from '@/lib/notifications';
 
 export const runtime = 'nodejs';
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get notification configuration from settings
-    const { data: settings, error: settingsError } = await supabase
+    const { data: settings, error: settingsError } = await supabaseAdmin
       .from('settings')
       .select('key, value')
       .in('key', [
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Get notification statistics
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('notification_queue')
       .select('status, scheduled_for, created_at')
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()); // Last 7 days

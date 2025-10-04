@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase';
 import { NotificationService, NotificationData, NotificationConfig } from './notifications';
 
 // Notification queue item
@@ -46,7 +46,7 @@ export const scheduleAppointmentReminders = async (
     let recipientPhone: string | undefined;
 
     if (appointmentData.lead_id) {
-      const { data: lead } = await supabase
+      const { data: lead } = await supabaseAdmin
         .from('leads')
         .select('name, email, phone')
         .eq('id', appointmentData.lead_id)
@@ -135,7 +135,7 @@ export const scheduleAppointmentReminders = async (
 
     // Insert notifications into the queue
     if (notificationsToSchedule.length > 0) {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('notification_queue')
         .insert(notificationsToSchedule);
 
@@ -153,7 +153,7 @@ export const scheduleAppointmentReminders = async (
 // Cancel scheduled reminders for an appointment
 export const cancelAppointmentReminders = async (appointmentId: string): Promise<void> => {
   try {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('notification_queue')
       .delete()
       .eq('appointment_id', appointmentId)
@@ -202,7 +202,7 @@ export const scheduleLeadNotification = async (
 ): Promise<void> => {
   try {
     // Get admin users to notify (you can customize this logic)
-    const { data: adminUsers } = await supabase
+    const { data: adminUsers } = await supabaseAdmin
       .from('users')
       .select('email, name')
       .eq('role', 'admin');
@@ -234,7 +234,7 @@ export const scheduleLeadNotification = async (
       attempts: 0,
     }));
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('notification_queue')
       .insert(notificationsToSchedule);
 
@@ -254,7 +254,7 @@ export const processPendingNotifications = async (config?: NotificationConfig): 
     const now = new Date().toISOString();
 
     // Get all pending notifications that are due
-    const { data: pendingNotifications, error } = await supabase
+    const { data: pendingNotifications, error } = await supabaseAdmin
       .from('notification_queue')
       .select('*')
       .eq('status', 'pending')
@@ -278,7 +278,7 @@ export const processPendingNotifications = async (config?: NotificationConfig): 
     for (const notification of pendingNotifications) {
       try {
         // Update attempt count and last attempt time
-        await supabase
+        await supabaseAdmin
           .from('notification_queue')
           .update({
             attempts: notification.attempts + 1,
@@ -300,7 +300,7 @@ export const processPendingNotifications = async (config?: NotificationConfig): 
 
         // Update status based on result
         if (result.success) {
-          await supabase
+          await supabaseAdmin
             .from('notification_queue')
             .update({
               status: 'sent',
@@ -315,7 +315,7 @@ export const processPendingNotifications = async (config?: NotificationConfig): 
               ? 'reminder_24h_sent'
               : 'reminder_2h_sent';
 
-            await supabase
+            await supabaseAdmin
               .from('appointments')
               .update({ [fieldToUpdate]: true })
               .eq('id', notification.appointment_id);
@@ -324,7 +324,7 @@ export const processPendingNotifications = async (config?: NotificationConfig): 
           console.log(`Successfully sent notification ${notification.id}`);
         } else {
           const errorMessage = result.error || 'Failed to send notification';
-          await supabase
+          await supabaseAdmin
             .from('notification_queue')
             .update({
               status: notification.attempts >= 2 ? 'failed' : 'pending',
@@ -337,7 +337,7 @@ export const processPendingNotifications = async (config?: NotificationConfig): 
       } catch (error) {
         console.error(`Error processing notification ${notification.id}:`, error);
 
-        await supabase
+        await supabaseAdmin
           .from('notification_queue')
           .update({
             status: notification.attempts >= 2 ? 'failed' : 'pending',
@@ -359,7 +359,7 @@ export const getNotificationStats = async (): Promise<{
   total: number;
 }> => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('notification_queue')
       .select('status')
       .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Last 30 days
