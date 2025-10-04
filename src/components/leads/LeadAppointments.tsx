@@ -14,17 +14,14 @@ interface Appointment {
 interface LeadAppointmentsProps {
   leadId: string;
   onAppointmentClick?: (appointment: Appointment) => void;
-  showReminderButtons?: boolean;
 }
 
 const LeadAppointments: React.FC<LeadAppointmentsProps> = ({
   leadId,
-  onAppointmentClick,
-  showReminderButtons = false
+  onAppointmentClick
 }) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAppointments();
@@ -73,36 +70,6 @@ const LeadAppointments: React.FC<LeadAppointmentsProps> = ({
         return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const sendReminder = async (appointmentId: string, type: 'confirmation' | 'reminder') => {
-    try {
-      setSendingReminder(appointmentId);
-
-      const response = await fetch('/api/appointments/reminders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          appointmentId,
-          type
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to send reminder');
-      }
-
-      // Show success message (you can implement a toast notification here)
-      console.log(`${type} email sent successfully`);
-
-    } catch (error) {
-      console.error(`Error sending ${type}:`, error);
-      // Show error message (you can implement a toast notification here)
-    } finally {
-      setSendingReminder(null);
     }
   };
 
@@ -162,38 +129,6 @@ const LeadAppointments: React.FC<LeadAppointmentsProps> = ({
               </div>
             )}
           </div>
-
-          {showReminderButtons && appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
-            <div className="flex gap-1 mt-2 pt-2 border-t border-gray-200">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  sendReminder(appointment.id, 'confirmation');
-                }}
-                disabled={sendingReminder === appointment.id}
-                className="flex items-center space-x-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded text-xs font-medium transition-colors disabled:opacity-50"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                <span>{sendingReminder === appointment.id ? 'Sending...' : 'Send Confirmation'}</span>
-              </button>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  sendReminder(appointment.id, 'reminder');
-                }}
-                disabled={sendingReminder === appointment.id}
-                className="flex items-center space-x-1 px-2 py-1 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded text-xs font-medium transition-colors disabled:opacity-50"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{sendingReminder === appointment.id ? 'Sending...' : 'Send Reminder'}</span>
-              </button>
-            </div>
-          )}
         </div>
       ))}
     </div>
