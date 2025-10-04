@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
     name: "Import & Export",
     adminOnly: true,
     subItems: [
-      { name: "Google Sheets Import", path: "/import", pro: false },
+      { name: "CSV Import", path: "/import", pro: false },
       { name: "Data Export", path: "/export", pro: false },
     ],
   },
