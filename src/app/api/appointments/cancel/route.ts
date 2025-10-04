@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 
 // Use service role client for admin operations
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function GET(request: NextRequest) {
   try {
@@ -227,6 +230,35 @@ export async function GET(request: NextRequest) {
           updated_at: new Date().toISOString()
         })
         .eq('id', appointment.leads.id);
+    }
+
+    // Send cancellation notification to admin
+    try {
+      await resend.emails.send({
+        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
+        to: [process.env.ADMIN_EMAIL!],
+        subject: 'Tour Cancelled - Shallow Bay Advisors',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #dc2626;">Tour Cancellation Notice</h2>
+            <p>A tour has been cancelled by the customer:</p>
+            <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+              <p><strong>Customer:</strong> ${appointment.leads.name}</p>
+              <p><strong>Email:</strong> ${appointment.leads.email}</p>
+              <p><strong>Tour Date & Time:</strong> ${formatDateTime(appointment.start_time)}</p>
+              <p><strong>Property:</strong> ${appointment.description || 'Not specified'}</p>
+            </div>
+            <p>The lead has been moved to the "Canceled/No Show" stage in the CRM pipeline.</p>
+            <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280;">
+              <strong>Shallow Bay Advisors</strong><br>
+              Commercial Real Estate CRM System
+            </p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Error sending admin cancellation notification:', emailError);
+      // Don't fail the cancellation if email fails
     }
 
     // Log the cancellation activity
