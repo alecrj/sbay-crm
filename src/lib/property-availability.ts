@@ -213,12 +213,15 @@ export async function getAvailableTimeSlots(
       .not('status', 'eq', 'cancelled');
 
     // Generate 30-minute intervals
+    // Work in UTC since appointments are stored in UTC
     for (let minutes = businessStart; minutes + duration <= businessEnd; minutes += 30) {
       const slotStart = new Date(appointmentDate);
-      slotStart.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+      // Add EDT offset (4 hours) to convert business hours to UTC
+      const utcHour = Math.floor(minutes / 60) + 4; // Business hours are in EDT, convert to UTC
+      slotStart.setUTCHours(utcHour, minutes % 60, 0, 0);
 
       const slotEnd = new Date(slotStart);
-      slotEnd.setMinutes(slotEnd.getMinutes() + duration);
+      slotEnd.setUTCMinutes(slotEnd.getUTCMinutes() + duration);
 
       // Check if this slot conflicts with existing appointments
       const hasConflict = existingAppointments?.some(apt => {

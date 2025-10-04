@@ -78,16 +78,22 @@ export async function GET(request: NextRequest) {
     const slots = await getAvailableTimeSlots(propertyId, date, duration);
 
     // Format slots for frontend consumption
-    const formattedSlots = slots.map(slot => ({
-      start: slot.start.toISOString(),
-      end: slot.end.toISOString(),
-      display_time: slot.start.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }),
-      duration: duration
-    }));
+    // Slots are in UTC, convert to EDT for display
+    const formattedSlots = slots.map(slot => {
+      // Convert UTC time to EDT by subtracting 4 hours for display
+      const edtTime = new Date(slot.start.getTime() - (4 * 60 * 60 * 1000));
+      return {
+        start: slot.start.toISOString(),
+        end: slot.end.toISOString(),
+        display_time: edtTime.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: 'UTC' // Display the EDT time as-is without further conversion
+        }),
+        duration: duration
+      };
+    });
 
     return NextResponse.json(
       {
