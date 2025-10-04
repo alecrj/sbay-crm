@@ -50,14 +50,23 @@ export async function POST(request: NextRequest) {
     };
 
     settings?.forEach(setting => {
-      const value = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+      // Handle JSONB values - they may be objects or primitives
+      let value = setting.value;
+      if (typeof value === 'string') {
+        // Try to parse as JSON, if it fails just use the string as-is
+        try {
+          value = JSON.parse(value);
+        } catch {
+          // Value is already a plain string, use it directly
+        }
+      }
 
       switch (setting.key) {
         case 'notifications_email_enabled':
-          config.email!.enabled = value;
+          config.email!.enabled = value === true || value === 'true';
           break;
         case 'notifications_sms_enabled':
-          config.sms!.enabled = value;
+          config.sms!.enabled = value === true || value === 'true';
           break;
         case 'notifications_email_provider':
           config.email!.provider = value;
