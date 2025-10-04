@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
       ...cleanOtherData
     };
 
+    console.log('About to insert lead with data:', JSON.stringify(leadData, null, 2));
+
     const { data: leadResult, error: leadError } = await supabase
       .from('leads')
       .insert([leadData])
@@ -92,8 +94,9 @@ export async function POST(request: NextRequest) {
 
     if (leadError) {
       console.error('Error creating lead:', leadError);
+      console.error('Lead data that failed:', JSON.stringify(leadData, null, 2));
       const leadErrorResponse = NextResponse.json(
-        { error: 'Failed to create lead', details: leadError.message },
+        { error: 'Failed to create lead', details: leadError.message, hint: leadError.hint, code: leadError.code },
         { status: 500 }
       );
 
