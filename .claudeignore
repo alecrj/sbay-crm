@@ -1,0 +1,17 @@
+node_modules
+.next
+dist
+build
+.git
+  **/*.log
+  **/*.cache
+  **/coverage/
+  **/.turbo/
+  **/.vercel/
+  **/.DS_Store
+  **/tmp/
+  **/temp/
+  EOF
+
+  EOF
+
