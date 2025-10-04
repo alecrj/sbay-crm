@@ -82,6 +82,15 @@ export async function GET(request: NextRequest) {
       .eq('cancel_token', token)
       .single();
 
+    console.log('Token validation debug:', {
+      tokenError,
+      tokenData,
+      hasTokenData: !!tokenData,
+      expiresAt: tokenData?.expires_at,
+      currentTime: new Date().toISOString(),
+      isExpired: tokenData ? new Date(tokenData.expires_at) < new Date() : 'no token data'
+    });
+
     if (tokenError || !tokenData || new Date(tokenData.expires_at) < new Date()) {
       return new NextResponse(`
         <!DOCTYPE html>
