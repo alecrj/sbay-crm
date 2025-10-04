@@ -91,7 +91,6 @@ const othersItems: NavItem[] = [
     subItems: [
       { name: "Profile", path: "/profile", pro: false },
       { name: "User Management", path: "/users", pro: false, adminOnly: true },
-      { name: "Notifications", path: "/settings/notifications", pro: false },
       { name: "Integrations", path: "/settings/integrations", pro: false, adminOnly: true },
     ],
   },
