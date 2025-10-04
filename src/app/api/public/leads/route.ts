@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       appointmentTime,
       source = 'website',
       appointment_type = 'consultation',
+      status,
       ...otherData
     } = data;
 
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       phone,
       property_interest,
       source,
-      status: 'new',
+      status: status || 'new',
       type: 'consultation',
       priority: 'medium',
       ...cleanOtherData
