@@ -172,6 +172,7 @@ export async function GET(request: NextRequest) {
         <!DOCTYPE html>
         <html>
           <head>
+            <meta charset="UTF-8">
             <title>Already Cancelled</title>
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <style>
@@ -213,7 +214,7 @@ export async function GET(request: NextRequest) {
         </html>
       `, {
         status: 200,
-        headers: { 'Content-Type': 'text/html' }
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
       });
     }
 
@@ -243,6 +244,19 @@ export async function GET(request: NextRequest) {
 
     // Send cancellation notification to admin
     try {
+      const adminFormatDateTime = (dateTime: string) => {
+        return new Date(dateTime).toLocaleString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+          timeZoneName: 'short'
+        });
+      };
+
       await resend.emails.send({
         from: 'Shallow Bay Advisors <onboarding@resend.dev>',
         to: [process.env.ADMIN_EMAIL!],
@@ -254,7 +268,7 @@ export async function GET(request: NextRequest) {
             <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
               <p><strong>Customer:</strong> ${appointment.leads.name}</p>
               <p><strong>Email:</strong> ${appointment.leads.email}</p>
-              <p><strong>Tour Date & Time:</strong> ${formatDateTime(appointment.start_time)}</p>
+              <p><strong>Tour Date & Time:</strong> ${adminFormatDateTime(appointment.start_time)}</p>
               <p><strong>Property:</strong> ${appointment.description || 'Not specified'}</p>
             </div>
             <p>The lead has been moved to the "Canceled/No Show" stage in the CRM pipeline.</p>
@@ -313,6 +327,7 @@ export async function GET(request: NextRequest) {
       <!DOCTYPE html>
       <html>
         <head>
+          <meta charset="UTF-8">
           <title>Appointment Cancelled</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
@@ -375,7 +390,7 @@ export async function GET(request: NextRequest) {
       </html>
     `, {
       status: 200,
-      headers: { 'Content-Type': 'text/html' }
+      headers: { 'Content-Type': 'text/html; charset=utf-8' }
     });
 
   } catch (error) {
