@@ -126,7 +126,14 @@ const CSVImport: React.FC = () => {
         throw new Error(data.error || 'Import failed');
       }
 
-      setImportResult(data.summary);
+      // Log full results for debugging
+      console.log('Import results:', data);
+
+      setImportResult({
+        ...data.summary,
+        errorDetails: data.results?.errorDetails,
+        duplicateEmails: data.results?.duplicateEmails,
+      });
       setStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import CSV');
@@ -332,6 +339,36 @@ const CSVImport: React.FC = () => {
               <div className="text-sm text-gray-600 dark:text-gray-300">Total Rows</div>
             </div>
           </div>
+
+          {/* Error Details */}
+          {importResult.errorDetails && importResult.errorDetails.length > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">
+                Errors ({importResult.errorDetails.length})
+              </h3>
+              <div className="space-y-2">
+                {importResult.errorDetails.map((error, idx) => (
+                  <div key={idx} className="text-sm text-red-700 dark:text-red-400">
+                    <span className="font-medium">Row {error.row}:</span> {error.error}
+                    {error.email && <span className="text-xs"> ({error.email})</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Duplicate Details */}
+          {importResult.duplicateEmails && importResult.duplicateEmails.length > 0 && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-2">
+                Skipped Duplicates ({importResult.duplicateEmails.length})
+              </h3>
+              <div className="text-sm text-yellow-700 dark:text-yellow-400">
+                {importResult.duplicateEmails.slice(0, 5).join(', ')}
+                {importResult.duplicateEmails.length > 5 && ` and ${importResult.duplicateEmails.length - 5} more...`}
+              </div>
+            </div>
+          )}
 
           <button
             onClick={reset}
