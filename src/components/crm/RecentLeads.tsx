@@ -9,7 +9,6 @@ interface RecentLead {
   email: string;
   company?: string;
   status: string;
-  priority: string;
   source: string;
   property_interest?: string;
   created_at: string;
@@ -59,16 +58,6 @@ const RecentLeads: React.FC = () => {
       'closed-lost': 'bg-red-100 text-red-800 border-red-200',
     };
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200';
-  };
-
-  const getPriorityColor = (priority: string) => {
-    const colors = {
-      'low': 'text-green-600',
-      'medium': 'text-yellow-600',
-      'high': 'text-orange-600',
-      'urgent': 'text-red-600',
-    };
-    return colors[priority as keyof typeof colors] || 'text-gray-600';
   };
 
   const getSourceIcon = (source: string) => {
@@ -189,14 +178,8 @@ const RecentLeads: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between sm:contents">
-                    <div className={`font-medium ${getPriorityColor(lead.priority)}`}>
-                      {lead.priority.toUpperCase()}
-                    </div>
-
-                    <div className="text-gray-400 dark:text-gray-500">
-                      {formatDate(lead.created_at)}
-                    </div>
+                  <div className="text-gray-400 dark:text-gray-500">
+                    {formatDate(lead.created_at)}
                   </div>
                 </div>
               </div>

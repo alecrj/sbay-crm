@@ -131,16 +131,6 @@ const LeadKanban: React.FC = () => {
     return filteredLeads.filter(lead => lead.status === status);
   };
 
-  const getPriorityColor = (priority: Lead['priority']) => {
-    switch (priority) {
-      case 'urgent': return 'border-l-red-500';
-      case 'high': return 'border-l-orange-500';
-      case 'medium': return 'border-l-yellow-500';
-      case 'low': return 'border-l-green-500';
-      default: return 'border-l-gray-300';
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -197,7 +187,6 @@ const LeadKanban: React.FC = () => {
               onMoveLead={moveLead}
               onEditLead={handleEditLead}
               onDeleteLead={deleteLead}
-              getPriorityColor={getPriorityColor}
               isAdmin={isAdmin}
             />
           ))}
@@ -226,7 +215,6 @@ interface KanbanColumnProps {
   onMoveLead: (leadId: string, newStatus: Lead['status']) => void;
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (leadId: string) => void;
-  getPriorityColor: (priority: Lead['priority']) => string;
   isAdmin: boolean;
 }
 
@@ -236,7 +224,6 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   onMoveLead,
   onEditLead,
   onDeleteLead,
-  getPriorityColor,
   isAdmin,
 }) => {
   const [{ isOver }, drop] = useDrop({
@@ -279,7 +266,6 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             lead={lead}
             onEdit={onEditLead}
             onDelete={onDeleteLead}
-            priorityColor={getPriorityColor(lead.priority)}
             isAdmin={isAdmin}
           />
         ))}
@@ -298,7 +284,6 @@ interface DraggableLeadCardProps {
   lead: Lead;
   onEdit: (lead: Lead) => void;
   onDelete: (leadId: string) => void;
-  priorityColor: string;
   isAdmin: boolean;
 }
 
@@ -306,7 +291,6 @@ const DraggableLeadCard: React.FC<DraggableLeadCardProps> = ({
   lead,
   onEdit,
   onDelete,
-  priorityColor,
   isAdmin,
 }) => {
   const [{ isDragging }, drag] = useDrag({
@@ -327,7 +311,6 @@ const DraggableLeadCard: React.FC<DraggableLeadCardProps> = ({
         lead={lead}
         onEdit={onEdit}
         onDelete={onDelete}
-        priorityColor={priorityColor}
         isAdmin={isAdmin}
       />
     </div>

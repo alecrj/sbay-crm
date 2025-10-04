@@ -15,7 +15,6 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) => {
     title: "",
     type: "general-inquiry" as Lead['type'],
     status: "new" as Lead['status'],
-    priority: "medium" as Lead['priority'],
     name: "",
     email: "",
     phone: "",
@@ -40,7 +39,6 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) => {
         title: lead.title || "",
         type: lead.type || "general-inquiry",
         status: lead.status || "new",
-        priority: lead.priority || "medium",
         name: lead.name || "",
         email: lead.email || "",
         phone: lead.phone || "",
@@ -289,23 +287,6 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onSave, onCancel }) => {
               <option value="proposal-sent">Proposal Sent</option>
               <option value="closed-won">Closed Won</option>
               <option value="closed-lost">Closed Lost</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Priority
-            </label>
-            <select
-              name="priority"
-              value={formData.priority}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
             </select>
           </div>
         </div>

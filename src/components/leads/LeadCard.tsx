@@ -15,11 +15,10 @@ interface LeadCardProps {
   };
   onEdit: (lead: Lead) => void;
   onDelete?: (leadId: string) => void;
-  priorityColor: string;
   isAdmin?: boolean;
 }
 
-const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onDelete, priorityColor, isAdmin = true }) => {
+const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onDelete, isAdmin = true }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -62,21 +61,6 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onDelete, priorityCol
           </svg>
         );
     }
-  };
-
-  const getPriorityBadge = (priority: Lead['priority']) => {
-    const colors = {
-      urgent: 'bg-red-100 text-red-800 border-red-200',
-      high: 'bg-orange-100 text-orange-800 border-orange-200',
-      medium: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      low: 'bg-green-100 text-green-800 border-green-200',
-    };
-
-    return (
-      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${colors[priority]}`}>
-        {priority.toUpperCase()}
-      </span>
-    );
   };
 
   const getLeadScoreBadge = (leadScore?: Lead['lead_score']) => {
@@ -159,7 +143,7 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onDelete, priorityCol
 
   return (
     <div
-      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-shadow duration-200 border-l-4 ${priorityColor} ${isAdmin ? 'hover:shadow-md cursor-pointer' : 'cursor-default'}`}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-shadow duration-200 ${isAdmin ? 'hover:shadow-md cursor-pointer' : 'cursor-default'}`}
       onClick={isAdmin ? () => onEdit(lead) : undefined}
     >
       <div className="p-3 sm:p-4">
@@ -188,7 +172,6 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onDelete, priorityCol
                 </svg>
               </button>
             )}
-            {getPriorityBadge(lead.priority)}
             {getLeadScoreBadge(lead.lead_score)}
           </div>
         </div>
