@@ -151,23 +151,48 @@ export async function POST(request: NextRequest) {
       console.log('Attempting to send client email to:', email);
       console.log('RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
 
+      // Generate cancel token
+      const cancelToken = Buffer.from(`${appointmentResult?.id}:cancel:${Date.now()}`).toString('base64');
+      const cancelUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://sbaycrm.netlify.app'}/api/appointments/cancel?token=${cancelToken}`;
+
+      // Store the token
+      if (appointmentResult?.id) {
+        const expiresAt = new Date(appointmentDateTime);
+        expiresAt.setHours(expiresAt.getHours() - 1); // Token expires 1 hour before appointment
+
+        await supabase
+          .from('appointment_tokens')
+          .insert([{
+            appointment_id: appointmentResult.id,
+            cancel_token: cancelToken,
+            expires_at: expiresAt.toISOString()
+          }]);
+      }
+
       await resend.emails.send({
         from: 'Shallow Bay Advisors <onboarding@resend.dev>',
         to: [email],
-        subject: 'Appointment Confirmation - Shallow Bay Advisors',
+        subject: 'Tour Confirmation - Shallow Bay Advisors',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #2563eb;">Appointment Confirmation</h2>
+            <h2 style="color: #2563eb;">Tour Confirmation</h2>
             <p>Dear ${first_name} ${last_name},</p>
-            <p>Thank you for booking an appointment with SBAY Real Estate. Your appointment has been confirmed for:</p>
+            <p>Thank you for scheduling a property tour with Shallow Bay Advisors. Your tour has been confirmed for:</p>
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
               <p><strong>Date:</strong> ${new Date(appointmentDate).toLocaleDateString()}</p>
               <p><strong>Time:</strong> ${appointmentTime}</p>
-              <p><strong>Type:</strong> ${appointment_type}</p>
               ${property_interest ? `<p><strong>Property:</strong> ${property_interest}</p>` : ''}
             </div>
-            <p>We look forward to meeting with you. If you need to reschedule or have any questions, please contact us at (323) 810-7241.</p>
-            <p>Best regards,<br>SBAY Real Estate Team</p>
+            <p>We look forward to showing you the property. If you need to reschedule or have any questions, please contact us at (323) 810-7241.</p>
+
+            ${appointmentResult?.id ? `
+            <div style="margin: 30px 0; padding: 20px; background-color: #fef2f2; border-radius: 8px; text-align: center;">
+              <p style="margin: 0 0 15px 0; color: #6b7280;">Need to cancel your tour?</p>
+              <a href="${cancelUrl}" style="display: inline-block; padding: 12px 30px; background-color: #dc2626; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">Cancel Tour</a>
+            </div>
+            ` : ''}
+
+            <p>Best regards,<br>Shallow Bay Advisors Team</p>
           </div>
         `
       });

@@ -218,6 +218,17 @@ export async function GET(request: NextRequest) {
       throw updateError;
     }
 
+    // Update lead status to canceled-no-show
+    if (appointment.leads?.id) {
+      await supabase
+        .from('leads')
+        .update({
+          status: 'canceled-no-show',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointment.leads.id);
+    }
+
     // Log the cancellation activity
     await supabase
       .from('lead_activities')
