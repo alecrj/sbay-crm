@@ -564,6 +564,9 @@ export class NotificationService {
         case 'appointment_reminder_2h':
           return await this.sendAppointmentReminder(notificationData);
 
+        case 'business_reminder_2h':
+          return await this.sendBusinessAppointmentReminder(notificationData);
+
         case 'new_lead_notification':
           if (!notificationData.email) {
             return { success: false, error: 'No email provided for lead notification' };
@@ -641,6 +644,65 @@ Shallow Bay Advisors`;
       return { success };
     } catch (error) {
       console.error('Error sending appointment reminder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Send business appointment reminder (internal notification)
+   */
+  private async sendBusinessAppointmentReminder(data: any): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!data.email) {
+        return { success: false, error: 'No email provided for business reminder' };
+      }
+
+      const subject = `Upcoming Tour: ${data.clientName} - ${data.appointmentTime}`;
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Tour Reminder - 2 Hours</h2>
+          <p>You have an upcoming property tour in 2 hours:</p>
+          <div style="background: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+            <h3 style="margin-top: 0; color: #991b1b;">${data.appointmentTitle}</h3>
+            <p><strong>Client:</strong> ${data.clientName}</p>
+            <p><strong>Email:</strong> ${data.clientEmail || 'Not provided'}</p>
+            <p><strong>Date:</strong> ${data.appointmentDate}</p>
+            <p><strong>Time:</strong> ${data.appointmentTime}</p>
+            ${data.appointmentLocation ? `<p><strong>Property:</strong> ${data.appointmentLocation}</p>` : ''}
+          </div>
+          <p style="color: #6b7280; font-size: 14px;">
+            This is an automated reminder to help you prepare for the tour.
+          </p>
+        </div>
+      `;
+
+      const text = `Tour Reminder - 2 Hours
+
+You have an upcoming property tour in 2 hours:
+
+${data.appointmentTitle}
+Client: ${data.clientName}
+Email: ${data.clientEmail || 'Not provided'}
+Date: ${data.appointmentDate}
+Time: ${data.appointmentTime}
+${data.appointmentLocation ? `Property: ${data.appointmentLocation}\n` : ''}
+
+This is an automated reminder to help you prepare for the tour.`;
+
+      const success = await NotificationService.sendEmail(
+        data.email,
+        subject,
+        html,
+        text
+      );
+
+      return { success };
+    } catch (error) {
+      console.error('Error sending business appointment reminder:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

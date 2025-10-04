@@ -8,11 +8,11 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/cron/process-reminders`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/process`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-cron-secret': process.env.CRON_SECRET
+        'Authorization': `Bearer ${process.env.CRON_API_KEY}`
       }
     });
 

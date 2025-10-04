@@ -110,6 +110,27 @@ export const scheduleAppointmentReminders = async (
         appointment_id: appointmentId,
         attempts: 0,
       });
+
+      // Schedule 2-hour business reminder
+      const businessEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      if (businessEmail) {
+        notificationsToSchedule.push({
+          type: 'business_reminder_2h',
+          recipient_email: businessEmail,
+          recipient_phone: undefined,
+          recipient_name: 'Shallow Bay Team',
+          scheduled_for: reminder2h.toISOString(),
+          data: {
+            ...baseNotificationData,
+            clientName: recipientName,
+            clientEmail: recipientEmail,
+          },
+          status: 'pending',
+          reminder_type: '2h',
+          appointment_id: appointmentId,
+          attempts: 0,
+        });
+      }
     }
 
     // Insert notifications into the queue
@@ -286,6 +307,19 @@ export const processPendingNotifications = async (config?: NotificationConfig): 
               error_message: null,
             })
             .eq('id', notification.id);
+
+          // Update legacy boolean fields in appointments table for UI compatibility
+          if (notification.appointment_id &&
+              (notification.reminder_type === '24h' || notification.reminder_type === '2h')) {
+            const fieldToUpdate = notification.reminder_type === '24h'
+              ? 'reminder_24h_sent'
+              : 'reminder_2h_sent';
+
+            await supabase
+              .from('appointments')
+              .update({ [fieldToUpdate]: true })
+              .eq('id', notification.appointment_id);
+          }
 
           console.log(`Successfully sent notification ${notification.id}`);
         } else {

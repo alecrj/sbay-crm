@@ -192,6 +192,23 @@ export async function POST(request: NextRequest) {
       // Don't fail the entire request if appointment creation fails
     }
 
+    // Schedule appointment reminders
+    if (appointmentResult?.id) {
+      try {
+        const { scheduleAppointmentReminders } = await import('@/lib/notification-scheduler');
+        await scheduleAppointmentReminders(appointmentResult.id, {
+          title: appointmentData.title,
+          start_time: appointmentData.start_time,
+          end_time: appointmentData.end_time,
+          location: property_interest || '',
+          lead_id: leadResult.id
+        });
+      } catch (reminderError) {
+        console.error('Failed to schedule appointment reminders:', reminderError);
+        // Don't fail the appointment creation if reminder scheduling fails
+      }
+    }
+
     // Send confirmation email to client
     try {
       console.log('Attempting to send client email to:', email);
