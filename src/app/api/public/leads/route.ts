@@ -157,8 +157,8 @@ export async function POST(request: NextRequest) {
 
       // Store the token
       if (appointmentResult?.id) {
+        // Token is valid until the appointment time
         const expiresAt = new Date(appointmentDateTime);
-        expiresAt.setHours(expiresAt.getHours() - 4); // Token expires 4 hours before appointment
 
         await supabase
           .from('appointment_tokens')
