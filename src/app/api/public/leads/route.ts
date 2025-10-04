@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       appointmentDate,
       appointmentTime,
       source = 'website',
-      appointment_type = 'consultation',
+      appointment_type = 'tour',
       status,
       ...otherData
     } = data;
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     const appointmentEndTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     const appointmentData = {
-      title: `${appointment_type} - ${first_name} ${last_name}`,
+      title: `Tour - ${first_name} ${last_name}`,
       start_time: appointmentDateTime.toISOString(),
       end_time: appointmentEndTime.toISOString(),
       lead_id: leadResult.id,
