@@ -134,11 +134,48 @@ export async function POST(request: NextRequest) {
     const appointmentDateTime = new Date(localDate.getTime() + (utcOffset * 60 * 1000));
     const appointmentEndTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
+    // Check for overlapping appointments to prevent double booking
+    if (propertyId) {
+      const { data: existingAppointments, error: checkError } = await supabase
+        .from('appointments')
+        .select('id, start_time, end_time')
+        .eq('property_id', propertyId)
+        .not('status', 'eq', 'cancelled');
+
+      if (checkError) {
+        console.error('Error checking appointment availability:', checkError);
+      }
+
+      // Check for overlaps: appointment overlaps if apt_start < new_end AND apt_end > new_start
+      const hasOverlap = existingAppointments?.some(apt => {
+        const aptStart = new Date(apt.start_time);
+        const aptEnd = new Date(apt.end_time);
+        return aptStart < appointmentEndTime && aptEnd > appointmentDateTime;
+      });
+
+      if (hasOverlap) {
+        const availabilityErrorResponse = NextResponse.json(
+          {
+            error: 'Time slot no longer available',
+            details: 'This time slot is already booked. Please select another time.'
+          },
+          { status: 400 }
+        );
+
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          availabilityErrorResponse.headers.set(key, value);
+        });
+
+        return availabilityErrorResponse;
+      }
+    }
+
     const appointmentData = {
       title: `Tour - ${first_name} ${last_name}`,
       start_time: appointmentDateTime.toISOString(),
       end_time: appointmentEndTime.toISOString(),
       lead_id: leadResult.id,
+      property_id: propertyId || null,
       status: 'scheduled',
       description: property_interest || ''
     };
