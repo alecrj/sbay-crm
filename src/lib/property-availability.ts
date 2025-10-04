@@ -48,9 +48,8 @@ export async function checkPropertyAvailability(
     const { data: blockedDates, error: blockedError } = await supabase
       .from('calendar_blocked_dates')
       .select('id')
-      .eq('calendar_id', calendar.id)
-      .eq('blocked_date', appointmentDate)
-      .eq('is_active', true);
+      .eq('property_id', propertyId)
+      .eq('blocked_date', appointmentDate);
 
     if (blockedError) {
       console.error('Error checking blocked dates:', blockedError);
@@ -189,9 +188,8 @@ export async function getAvailableTimeSlots(
     const { data: blockedDates } = await supabase
       .from('calendar_blocked_dates')
       .select('id')
-      .eq('calendar_id', calendarData.id)
-      .eq('blocked_date', date)
-      .eq('is_active', true);
+      .eq('property_id', propertyId)
+      .eq('blocked_date', date);
 
     if (blockedDates && blockedDates.length > 0) {
       return [];
