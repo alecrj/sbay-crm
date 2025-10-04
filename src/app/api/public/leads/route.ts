@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       appointmentDate: cleanAppointmentDate,
       appointmentTime: cleanAppointmentTime,
       appointment_type: cleanAppointmentType,
+      property_title: formPropertyTitle, // Filter out - used for display only, not a DB field
       ...cleanOtherData
     } = otherData;
 
