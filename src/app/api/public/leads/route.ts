@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       source,
       status: status || 'new',
       type: 'consultation',
+      priority: 'medium',
       ...cleanOtherData
     };
 

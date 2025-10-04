@@ -49,6 +49,7 @@ export interface Lead {
   title: string
   type: 'consultation' | 'property-inquiry' | 'general-inquiry' | 'contact-form'
   status: 'new' | 'tour-scheduled' | 'canceled-no-show' | 'showing-completed' | 'won' | 'lost'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
   lead_score?: 'low' | 'medium' | 'high'
   name: string
   email: string
