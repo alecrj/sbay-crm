@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
           type: 'general-inquiry',
           status: 'new',
           priority: 'medium',
-          source: 'csv-import',
+          source: 'other',
         };
 
         // Apply mapping
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
               title: 'Lead imported',
               description: `Lead imported from CSV file (Row ${rowNumber})`,
               metadata: {
-                import_source: 'csv-upload',
+                import_source: 'csv',
                 import_row: rowNumber,
                 filename: file.name,
               }
