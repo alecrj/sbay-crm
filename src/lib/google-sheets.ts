@@ -125,7 +125,6 @@ export const convertSheetDataToLeads = (
     startRow = 0,
     endRow = sheetData.values.length,
     defaultSource = 'google-sheets',
-    defaultPriority = 'medium',
     defaultStatus = 'new',
     defaultType = 'general-inquiry',
   } = options;
@@ -158,7 +157,6 @@ export const convertSheetDataToLeads = (
 
         // System fields with smart defaults
         source: mapping.source !== undefined ? (row[mapping.source] || defaultSource).trim() : defaultSource,
-        priority: mapping.priority !== undefined ? (row[mapping.priority] || defaultPriority).trim() : defaultPriority,
         status: mapping.status !== undefined ? (row[mapping.status] || defaultStatus).trim() : defaultStatus,
         type: mapping.type !== undefined ? (row[mapping.type] || defaultType).trim() : defaultType,
 

@@ -130,7 +130,6 @@ export async function POST(request: NextRequest) {
         title: `Appointment Request - ${name}`,
         type: 'consultation' as const,
         status: 'new' as const,
-        priority: 'medium' as const,
         source: 'website' as const,
         consultation_date: appointmentDate,
         consultation_time: appointmentTime,
