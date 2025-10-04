@@ -123,7 +123,15 @@ export async function POST(request: NextRequest) {
     };
 
     const time24h = convertTo24Hour(appointmentTime);
-    const appointmentDateTime = new Date(`${appointmentDate}T${time24h}`);
+    // Parse as local date/time and convert to proper UTC timestamp for Eastern Time
+    // The user selects time in Eastern Time, so we need to add 4-5 hours for UTC storage
+    const [year, month, day] = appointmentDate.split('-').map(Number);
+    const [hours, minutes] = time24h.split(':').map(Number);
+
+    // Create UTC date by adding EDT offset (4 hours) - adjust to 5 hours during EST season
+    const localDate = new Date(year, month - 1, day, hours, minutes, 0);
+    const utcOffset = 4 * 60; // EDT offset in minutes
+    const appointmentDateTime = new Date(localDate.getTime() + (utcOffset * 60 * 1000));
     const appointmentEndTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
     const appointmentData = {
