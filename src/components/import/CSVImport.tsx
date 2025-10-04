@@ -33,14 +33,7 @@ const CSVImport: React.FC = () => {
     { key: 'email', label: 'Email *', required: true },
     { key: 'phone', label: 'Phone', required: false },
     { key: 'company', label: 'Company', required: false },
-    { key: 'property_interest', label: 'Property Interest', required: false },
-    { key: 'space_requirements', label: 'Space Requirements', required: false },
-    { key: 'budget', label: 'Budget', required: false },
-    { key: 'timeline', label: 'Timeline', required: false },
-    { key: 'message', label: 'Message/Notes', required: false },
-    { key: 'source', label: 'Source', required: false },
-    { key: 'status', label: 'Status', required: false },
-    { key: 'type', label: 'Type', required: false },
+    { key: 'message', label: 'Notes', required: false },
   ];
 
   const parseCSVLine = (line: string): string[] => {
