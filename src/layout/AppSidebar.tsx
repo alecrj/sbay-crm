@@ -64,9 +64,6 @@ const navItems: NavItem[] = [
     path: "/property-calendars",
     adminOnly: true,
   },
-];
-
-const othersItems: NavItem[] = [
   {
     icon: <PlugInIcon />,
     name: "Import & Export",
@@ -77,24 +74,14 @@ const othersItems: NavItem[] = [
     ],
   },
   {
-    icon: <PieChartIcon />,
-    name: "Reports",
-    adminOnly: true,
-    subItems: [
-      { name: "Lead Analytics", path: "/reports/leads", pro: false },
-      { name: "Property Performance", path: "/reports/properties", pro: false },
-    ],
-  },
-  {
     icon: <UserCircleIcon />,
-    name: "Settings",
-    subItems: [
-      { name: "Profile", path: "/profile", pro: false },
-      { name: "User Management", path: "/users", pro: false, adminOnly: true },
-      { name: "Integrations", path: "/settings/integrations", pro: false, adminOnly: true },
-    ],
+    name: "User Management",
+    path: "/users",
+    adminOnly: true,
   },
 ];
+
+const othersItems: NavItem[] = [];
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
@@ -353,23 +340,6 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {renderMenuItems(navItems, "main")}
-            </div>
-
-            <div className="">
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "MANAGEMENT"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(othersItems, "others")}
             </div>
           </div>
         </nav>
