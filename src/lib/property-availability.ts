@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase';
 
 interface TimeSlot {
   start: Date;
@@ -23,7 +23,7 @@ export async function checkPropertyAvailability(
     const dayOfWeek = startTime.getDay();
 
     // Check if the property has a calendar set up
-    const { data: calendar, error: calendarError } = await supabase
+    const { data: calendar, error: calendarError } = await supabaseAdmin
       .from('property_calendars')
       .select('id, is_active')
       .eq('property_id', propertyId)
@@ -45,7 +45,7 @@ export async function checkPropertyAvailability(
     // Check if the date is blocked
     const appointmentDate = startTime.toISOString().split('T')[0];
 
-    const { data: blockedDates, error: blockedError } = await supabase
+    const { data: blockedDates, error: blockedError } = await supabaseAdmin
       .from('calendar_blocked_dates')
       .select('id')
       .eq('property_id', propertyId)
@@ -65,7 +65,7 @@ export async function checkPropertyAvailability(
     }
 
     // Check business hours for this day of week
-    const { data: availability, error: availabilityError } = await supabase
+    const { data: availability, error: availabilityError } = await supabaseAdmin
       .from('calendar_availability')
       .select('start_time, end_time, is_active')
       .eq('property_id', propertyId)
@@ -111,7 +111,7 @@ export async function checkPropertyAvailability(
     }
 
     // Check for existing appointments at this time
-    const { data: existingAppointments, error: appointmentError } = await supabase
+    const { data: existingAppointments, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .select('id')
       .eq('property_id', propertyId)
@@ -162,7 +162,7 @@ export async function getAvailableTimeSlots(
     const dayOfWeek = appointmentDate.getDay();
 
     // Get property calendar and business hours
-    const { data: calendarData, error: calendarError } = await supabase
+    const { data: calendarData, error: calendarError } = await supabaseAdmin
       .from('property_calendars')
       .select('id, is_active')
       .eq('property_id', propertyId)
@@ -173,7 +173,7 @@ export async function getAvailableTimeSlots(
     }
 
     // Get availability for this day of week
-    const { data: availability, error: availabilityError } = await supabase
+    const { data: availability, error: availabilityError } = await supabaseAdmin
       .from('calendar_availability')
       .select('start_time, end_time, is_active')
       .eq('property_id', propertyId)
@@ -185,7 +185,7 @@ export async function getAvailableTimeSlots(
     }
 
     // Check if date is blocked
-    const { data: blockedDates } = await supabase
+    const { data: blockedDates } = await supabaseAdmin
       .from('calendar_blocked_dates')
       .select('id')
       .eq('property_id', propertyId)
@@ -204,7 +204,7 @@ export async function getAvailableTimeSlots(
     const nextDay = new Date(appointmentDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    const { data: existingAppointments } = await supabase
+    const { data: existingAppointments } = await supabaseAdmin
       .from('appointments')
       .select('start_time, end_time')
       .eq('property_id', propertyId)
