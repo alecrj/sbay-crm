@@ -156,6 +156,41 @@ export default function AppointmentsPage() {
     }
   };
 
+  const deleteAppointment = async (appointmentId: string, appointmentTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${appointmentTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/appointments', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ appointmentId })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.error) {
+        console.error('API error deleting appointment:', result.error);
+        alert('Failed to delete appointment');
+        return;
+      }
+
+      // Remove from local state
+      setAppointments(prev => prev.filter(apt => apt.id !== appointmentId));
+      alert('Appointment deleted successfully');
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      alert('Failed to delete appointment. Please try again.');
+    }
+  };
+
   const sendRemindersManually = async () => {
     try {
       const response = await fetch('/.netlify/functions/send-appointment-reminders', {
@@ -304,36 +339,13 @@ export default function AppointmentsPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                📅 Appointment Management
-              </h1>
-              <p className="text-gray-600">
-                Manage your scheduled appointments and send reminders
-              </p>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={sendRemindersManually}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Send Reminders</span>
-              </button>
-
-              <a
-                href="/appointments/analytics"
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span>Analytics</span>
-              </a>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              📅 Appointment Management
+            </h1>
+            <p className="text-gray-600">
+              Manage your scheduled appointments and send reminders
+            </p>
           </div>
         </div>
 
@@ -456,9 +468,6 @@ export default function AppointmentsPage() {
                           <p className="text-sm text-gray-600 mb-1">
                             <strong>Time:</strong> {time} - {endTime}
                           </p>
-                          <p className="text-sm text-gray-600 mb-1">
-                            <strong>Location:</strong> {appointment.location}
-                          </p>
                         </div>
                       </div>
 
@@ -506,10 +515,10 @@ export default function AppointmentsPage() {
                       </a>
 
                       <button
-                        onClick={() => handleReschedule(appointment)}
-                        className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-center hover:bg-yellow-200"
+                        onClick={() => deleteAppointment(appointment.id, appointment.title)}
+                        className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded text-center hover:bg-red-200"
                       >
-                        Reschedule
+                        Delete
                       </button>
                     </div>
                   </div>
