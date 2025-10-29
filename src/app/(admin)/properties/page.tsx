@@ -40,6 +40,7 @@ export default function PropertiesPage() {
   const [formData, setFormData] = useState({
     title: '',
     type: 'warehouse',
+    property_type: 'single' as 'single' | 'multi_unit',
     location: '',
     county: '',
     street_address: '',
@@ -558,6 +559,29 @@ export default function PropertiesPage() {
                       </select>
                     </div>
                   </div>
+
+                  {/* Property Type Selection */}
+                  <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Property Type *
+                      </label>
+                      <select
+                        required
+                        value={formData.property_type}
+                        onChange={(e) => setFormData({...formData, property_type: e.target.value as 'single' | 'multi_unit'})}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="single">Single Property (Standard listing)</option>
+                        <option value="multi_unit">Multi-Unit Building (Add units after saving)</option>
+                      </select>
+                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                        {formData.property_type === 'single'
+                          ? 'This property will have its own detail page and booking calendar.'
+                          : 'This building will have an overview page. You\'ll add individual units with their own pages and booking calendars in the next step.'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Pricing & Details Section */}
@@ -625,42 +649,54 @@ export default function PropertiesPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Square Footage *
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            required
-                            value={formData.size}
-                            onChange={(e) => setFormData({...formData, size: e.target.value})}
-                            className="w-full pr-16 py-2 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="10000"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">sq ft</span>
+                    {/* Size and Price - Only for Single Properties */}
+                    {formData.property_type === 'single' && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Square Footage *
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              required
+                              value={formData.size}
+                              onChange={(e) => setFormData({...formData, size: e.target.value})}
+                              className="w-full pr-16 py-2 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="10000"
+                            />
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">sq ft</span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Price per Square Foot *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              required
+                              value={formData.price}
+                              onChange={(e) => setFormData({...formData, price: e.target.value})}
+                              className="w-full pl-8 pr-20 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="8.50"
+                            />
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">/SF/YR</span>
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Price per Square Foot *
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            required
-                            value={formData.price}
-                            onChange={(e) => setFormData({...formData, price: e.target.value})}
-                            className="w-full pl-8 pr-20 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="8.50"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">/SF/YR</span>
-                        </div>
+                    )}
+
+                    {/* Multi-Unit Building Note */}
+                    {formData.property_type === 'multi_unit' && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                          📦 <strong>Multi-Unit Building:</strong> Size and price will be set for each individual unit in the next step.
+                        </p>
                       </div>
-                    </div>
+                    )}
 
                     <div className="col-span-full">
                       <h4 className="text-md font-medium text-gray-900 dark:text-white mb-4">Property Images</h4>
