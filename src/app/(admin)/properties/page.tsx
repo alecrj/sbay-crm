@@ -605,9 +605,10 @@ export default function PropertiesPage() {
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select County</option>
-                          <option value="Miami-Dade">Miami-Dade</option>
                           <option value="Broward">Broward</option>
+                          <option value="Miami-Dade">Miami-Dade</option>
                           <option value="Palm Beach">Palm Beach</option>
+                          <option value="St. Lucie">St. Lucie</option>
                         </select>
                       </div>
                       <div>

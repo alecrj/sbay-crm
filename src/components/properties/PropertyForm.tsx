@@ -44,8 +44,17 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [counties, setCounties] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
+    // Use hardcoded counties list
+    setCounties([
+      { id: '1', name: 'Broward' },
+      { id: '2', name: 'Miami-Dade' },
+      { id: '3', name: 'Palm Beach' },
+      { id: '4', name: 'St. Lucie' },
+    ]);
+
     if (property) {
       const galleryArray = Array.isArray(property.gallery) ? property.gallery : [];
       setFormData({
@@ -384,10 +393,15 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             >
-              <option value="Miami-Dade">Miami-Dade</option>
-              <option value="Broward">Broward</option>
-              <option value="Palm Beach">Palm Beach</option>
-              <option value="St. Lucie">St. Lucie</option>
+              {counties.length === 0 ? (
+                <option value="">Loading counties...</option>
+              ) : (
+                counties.map((county) => (
+                  <option key={county.id} value={county.name}>
+                    {county.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
