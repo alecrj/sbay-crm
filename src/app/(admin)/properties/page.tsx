@@ -782,19 +782,7 @@ export default function PropertiesPage() {
                     </div>
                   </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <label className="flex items-center p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={formData.featured}
-                          onChange={(e) => setFormData({...formData, featured: e.target.checked})}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">Featured Property</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Display prominently on website</div>
-                        </div>
-                      </label>
+                    <div className="grid grid-cols-1 gap-6">
                       <label className="flex items-center p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                         <input
                           type="checkbox"
