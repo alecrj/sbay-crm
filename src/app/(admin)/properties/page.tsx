@@ -67,6 +67,9 @@ export default function PropertiesPage() {
     features: string[];
     image: string;
     gallery: string[];
+    galleryImages: string[]; // For tracking uploaded images
+    featuredImageIndex: number; // For tracking which image is featured
+    uploadingImage: boolean; // For tracking upload state
   }>>([]);
 
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
@@ -116,7 +119,10 @@ export default function PropertiesPage() {
       available: true,
       features: [],
       image: '',
-      gallery: []
+      gallery: [],
+      galleryImages: [],
+      featuredImageIndex: 0,
+      uploadingImage: false
     }]);
   };
 
@@ -161,6 +167,88 @@ export default function PropertiesPage() {
     const newUnits = [...units];
     newUnits[unitIndex].features = newUnits[unitIndex].features.filter(f => f !== feature);
     setUnits(newUnits);
+  };
+
+  // Unit image upload handlers
+  const handleUnitImageUpload = async (unitIndex: number, files: File[]) => {
+    if (!files || files.length === 0) return;
+
+    console.log(`Starting unit ${unitIndex} image upload for`, files.length, 'files');
+
+    // Set uploading state for this unit
+    const newUnits = [...units];
+    newUnits[unitIndex].uploadingImage = true;
+    setUnits(newUnits);
+
+    try {
+      const uploadedUrls: string[] = [];
+
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Unit image uploaded successfully:', data);
+          uploadedUrls.push(data.url);
+        } else {
+          console.error('Failed to upload unit image:', await response.text());
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        const updatedUnits = [...units];
+        const currentGallery = updatedUnits[unitIndex].galleryImages || [];
+        updatedUnits[unitIndex].galleryImages = [...currentGallery, ...uploadedUrls];
+        updatedUnits[unitIndex].gallery = [...currentGallery, ...uploadedUrls];
+
+        // Set first image as featured if none set
+        if (updatedUnits[unitIndex].galleryImages.length === uploadedUrls.length) {
+          updatedUnits[unitIndex].image = uploadedUrls[0];
+          updatedUnits[unitIndex].featuredImageIndex = 0;
+        }
+
+        updatedUnits[unitIndex].uploadingImage = false;
+        setUnits(updatedUnits);
+        console.log(`Unit ${unitIndex} images updated. Total gallery:`, updatedUnits[unitIndex].galleryImages.length);
+      }
+    } catch (error) {
+      console.error('Error uploading unit images:', error);
+      const updatedUnits = [...units];
+      updatedUnits[unitIndex].uploadingImage = false;
+      setUnits(updatedUnits);
+    }
+  };
+
+  const setUnitFeaturedImage = (unitIndex: number, imageUrl: string, index: number) => {
+    const newUnits = [...units];
+    newUnits[unitIndex].image = imageUrl;
+    newUnits[unitIndex].featuredImageIndex = index;
+    setUnits(newUnits);
+    console.log(`Unit ${unitIndex} featured image set to index ${index}:`, imageUrl);
+  };
+
+  const removeUnitGalleryImage = (unitIndex: number, imageIndex: number) => {
+    const newUnits = [...units];
+    const updatedGallery = newUnits[unitIndex].galleryImages.filter((_, i) => i !== imageIndex);
+    newUnits[unitIndex].galleryImages = updatedGallery;
+    newUnits[unitIndex].gallery = updatedGallery;
+
+    // Update featured image if necessary
+    if (imageIndex === newUnits[unitIndex].featuredImageIndex) {
+      newUnits[unitIndex].featuredImageIndex = 0;
+      newUnits[unitIndex].image = updatedGallery[0] || '';
+    } else if (imageIndex < newUnits[unitIndex].featuredImageIndex) {
+      newUnits[unitIndex].featuredImageIndex -= 1;
+    }
+
+    setUnits(newUnits);
+    console.log(`Unit ${unitIndex} image removed. Remaining:`, updatedGallery.length);
   };
 
   const handleImageUpload = async (files: File[]) => {
@@ -891,23 +979,19 @@ export default function PropertiesPage() {
                               />
                             </div>
 
-                            {/* Unit Image */}
+                            {/* Unit Images */}
                             <div className="mt-4">
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Unit Image URL
+                                Unit Images
                               </label>
-                              <input
-                                type="url"
-                                value={unit.image}
-                                onChange={(e) => updateUnit(index, 'image', e.target.value)}
-                                placeholder="https://..."
-                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              <ImageDropZone
+                                onImagesUploaded={(files) => handleUnitImageUpload(index, files)}
+                                isUploading={unit.uploadingImage || false}
+                                galleryImages={unit.galleryImages || []}
+                                featuredImageIndex={unit.featuredImageIndex || 0}
+                                onSetFeatured={(imageUrl, imgIndex) => setUnitFeaturedImage(index, imageUrl, imgIndex)}
+                                onRemoveImage={(imgIndex) => removeUnitGalleryImage(index, imgIndex)}
                               />
-                              {unit.image && (
-                                <div className="mt-2">
-                                  <img src={unit.image} alt="Unit preview" className="w-32 h-32 object-cover rounded-lg" />
-                                </div>
-                              )}
                             </div>
 
                             {/* Unit Features */}
