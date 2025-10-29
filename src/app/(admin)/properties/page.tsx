@@ -130,7 +130,7 @@ export default function PropertiesPage() {
     setUnits(newUnits);
   };
 
-  // Helper functions
+  // Helper functions for main property features
   const addFeature = (feature: string) => {
     if (!formData.features.includes(feature)) {
       setFormData({...formData, features: [...formData.features, feature]});
@@ -146,6 +146,21 @@ export default function PropertiesPage() {
       setFormData({...formData, features: [...formData.features, customFeature.trim()]});
       setCustomFeature('');
     }
+  };
+
+  // Helper functions for unit features
+  const addUnitFeature = (unitIndex: number, feature: string) => {
+    const newUnits = [...units];
+    if (!newUnits[unitIndex].features.includes(feature)) {
+      newUnits[unitIndex].features = [...newUnits[unitIndex].features, feature];
+      setUnits(newUnits);
+    }
+  };
+
+  const removeUnitFeature = (unitIndex: number, feature: string) => {
+    const newUnits = [...units];
+    newUnits[unitIndex].features = newUnits[unitIndex].features.filter(f => f !== feature);
+    setUnits(newUnits);
   };
 
   const handleImageUpload = async (files: File[]) => {
@@ -874,6 +889,75 @@ export default function PropertiesPage() {
                                 placeholder="Unit-specific details..."
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
+                            </div>
+
+                            {/* Unit Image */}
+                            <div className="mt-4">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Unit Image URL
+                              </label>
+                              <input
+                                type="url"
+                                value={unit.image}
+                                onChange={(e) => updateUnit(index, 'image', e.target.value)}
+                                placeholder="https://..."
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                              {unit.image && (
+                                <div className="mt-2">
+                                  <img src={unit.image} alt="Unit preview" className="w-32 h-32 object-cover rounded-lg" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Unit Features */}
+                            <div className="mt-4">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Unit Features
+                              </label>
+
+                              {/* Selected Features */}
+                              {unit.features.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Selected:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {unit.features.map((feature) => (
+                                      <span
+                                        key={feature}
+                                        className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                      >
+                                        {feature}
+                                        <button
+                                          type="button"
+                                          onClick={() => removeUnitFeature(index, feature)}
+                                          className="ml-1 text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                                        >
+                                          ×
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Available Features to Add */}
+                              <div>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Add features:</p>
+                                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+                                  {availableFeatures
+                                    .filter(feature => !unit.features.includes(feature))
+                                    .map((feature) => (
+                                      <button
+                                        key={feature}
+                                        type="button"
+                                        onClick={() => addUnitFeature(index, feature)}
+                                        className="text-left px-2 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-500 transition-colors"
+                                      >
+                                        + {feature}
+                                      </button>
+                                    ))}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ))}
