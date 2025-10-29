@@ -359,6 +359,13 @@ export default function PropertiesPage() {
         }
 
         console.log('✅ Property and calendar created successfully via API');
+
+        // If this is a multi-unit property, redirect to units management
+        if (formData.property_type === 'multi_unit' && result.property?.id) {
+          alert('Multi-unit building created! Now add individual units.');
+          router.push(`/properties/${result.property.id}/units`);
+          return;
+        }
       }
 
       console.log('✅ Property saved successfully');
@@ -386,6 +393,7 @@ export default function PropertiesPage() {
     setFormData({
       title: property.title,
       type: property.type,
+      property_type: property.property_type || 'single',
       location: property.location,
       county: property.county || '',
       street_address: property.street_address || '',
@@ -439,6 +447,7 @@ export default function PropertiesPage() {
     setFormData({
       title: '',
       type: 'warehouse',
+      property_type: 'single' as 'single' | 'multi_unit',
       location: '',
       county: '',
       street_address: '',
