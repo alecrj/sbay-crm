@@ -232,6 +232,24 @@ export async function POST(request: NextRequest) {
           }]);
       }
 
+      // Fetch property image if propertyId is provided
+      let propertyImageUrl = '';
+      if (propertyId) {
+        try {
+          const { data: propertyData } = await supabase
+            .from('properties')
+            .select('image, gallery')
+            .eq('id', propertyId)
+            .single();
+
+          if (propertyData) {
+            propertyImageUrl = propertyData.image || (propertyData.gallery && propertyData.gallery.length > 0 ? propertyData.gallery[0] : '');
+          }
+        } catch (err) {
+          console.error('Error fetching property image:', err);
+        }
+      }
+
       await resend.emails.send({
         from: 'Shallow Bay Advisors <onboarding@resend.dev>',
         to: [email],
@@ -241,9 +259,17 @@ export async function POST(request: NextRequest) {
             <h2 style="color: #2563eb;">Tour Confirmation</h2>
             <p>Dear ${first_name} ${last_name},</p>
             <p>Thank you for scheduling a property tour with Shallow Bay Advisors. Your tour has been confirmed for:</p>
+
+            ${propertyImageUrl ? `
+            <div style="margin: 20px 0; text-align: center;">
+              <img src="${propertyImageUrl}" alt="Property" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" />
+            </div>
+            ` : ''}
+
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
               <p><strong>Date:</strong> ${new Date(appointmentDate).toLocaleDateString()}</p>
               <p><strong>Time:</strong> ${appointmentTime}</p>
+              <p><strong>Duration:</strong> 30 minutes</p>
               ${property_interest ? `<p><strong>Property:</strong> ${property_interest}</p>` : ''}
             </div>
             <p>We look forward to showing you the property. If you need to reschedule or have any questions, please contact us at (323) 810-7241.</p>

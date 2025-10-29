@@ -445,6 +445,10 @@ function getConfirmationEmailContent(reminder: any, confirmLink: string, resched
               <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Date & Time:</td>
               <td style="padding: 8px 0; color: #374151;">${formatDateTime(reminder.appointment_start_time)}</td>
             </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Duration:</td>
+              <td style="padding: 8px 0; color: #374151;">30 minutes</td>
+            </tr>
             ${reminder.appointment_location ? `
             <tr>
               <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Location:</td>
@@ -514,6 +518,10 @@ function get24HourReminderContent(reminder: any, confirmLink: string, reschedule
               <td style="padding: 8px 0; color: #1e40af; font-weight: 600;">Date & Time:</td>
               <td style="padding: 8px 0; color: #1f2937;">${formatDateTime(reminder.appointment_start_time)}</td>
             </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #1e40af; font-weight: 600;">Duration:</td>
+              <td style="padding: 8px 0; color: #1f2937;">30 minutes</td>
+            </tr>
             ${reminder.appointment_location ? `
             <tr>
               <td style="padding: 8px 0; color: #1e40af; font-weight: 600;">Location:</td>
@@ -581,6 +589,10 @@ function get2HourReminderContent(reminder: any, confirmLink: string, rescheduleL
             <tr>
               <td style="padding: 8px 0; color: #92400e; font-weight: 600;">Date & Time:</td>
               <td style="padding: 8px 0; color: #1f2937;">${formatDateTime(reminder.appointment_start_time)}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #92400e; font-weight: 600;">Duration:</td>
+              <td style="padding: 8px 0; color: #1f2937;">30 minutes</td>
             </tr>
             ${reminder.appointment_location ? `
             <tr>
