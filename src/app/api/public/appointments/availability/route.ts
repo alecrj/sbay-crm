@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const propertyId = searchParams.get('propertyId');
     const date = searchParams.get('date');
-    const duration = parseInt(searchParams.get('duration') || '60');
+    const duration = parseInt(searchParams.get('duration') || '30');
 
     // Validate required parameters
     if (!propertyId || !date) {

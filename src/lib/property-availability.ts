@@ -155,7 +155,7 @@ function parseTimeToMinutes(timeString: string): number {
 export async function getAvailableTimeSlots(
   propertyId: string,
   date: string,
-  duration: number = 60 // minutes
+  duration: number = 30 // minutes
 ): Promise<TimeSlot[]> {
   try {
     const appointmentDate = new Date(date);
