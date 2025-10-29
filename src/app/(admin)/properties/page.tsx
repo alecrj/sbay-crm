@@ -56,6 +56,19 @@ export default function PropertiesPage() {
     features: [] as string[]
   });
 
+  // State for units (when property_type is 'multi_unit')
+  const [units, setUnits] = useState<Array<{
+    id?: string;
+    title: string;
+    size: string;
+    price: string;
+    description: string;
+    available: boolean;
+    features: string[];
+    image: string;
+    gallery: string[];
+  }>>([]);
+
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [featuredImageIndex, setFeaturedImageIndex] = useState<number>(0);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -92,6 +105,30 @@ export default function PropertiesPage() {
 
   // Custom feature input
   const [customFeature, setCustomFeature] = useState('');
+
+  // Unit management functions
+  const addUnit = () => {
+    setUnits([...units, {
+      title: '',
+      size: '',
+      price: '',
+      description: '',
+      available: true,
+      features: [],
+      image: '',
+      gallery: []
+    }]);
+  };
+
+  const removeUnit = (index: number) => {
+    setUnits(units.filter((_, i) => i !== index));
+  };
+
+  const updateUnit = (index: number, field: string, value: any) => {
+    const newUnits = [...units];
+    newUnits[index] = { ...newUnits[index], [field]: value };
+    setUnits(newUnits);
+  };
 
   // Helper functions
   const addFeature = (feature: string) => {
@@ -341,14 +378,19 @@ export default function PropertiesPage() {
 
         console.log('✅ Property updated successfully via API');
       } else {
-        console.log('➕ Creating new property with calendar via API...');
+        console.log('➕ Creating new property...');
+
+        // For multi-unit properties, don't include size/price (units will have those)
+        const parentPropertyData = formData.property_type === 'multi_unit'
+          ? { ...propertyData, size: '', price: '' }
+          : propertyData;
 
         const response = await fetch('/api/properties', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(propertyData)
+          body: JSON.stringify(parentPropertyData)
         });
 
         const result = await response.json();
@@ -358,13 +400,48 @@ export default function PropertiesPage() {
           throw new Error(result.error || 'Failed to create property');
         }
 
-        console.log('✅ Property and calendar created successfully via API');
+        console.log('✅ Property created successfully');
 
-        // If this is a multi-unit property, redirect to units management
-        if (formData.property_type === 'multi_unit' && result.property?.id) {
-          alert('Multi-unit building created! Now add individual units.');
-          router.push(`/properties/${result.property.id}/units`);
-          return;
+        // If this is a multi-unit property, create all units
+        if (formData.property_type === 'multi_unit' && result.property?.id && units.length > 0) {
+          console.log(`➕ Creating ${units.length} units...`);
+
+          for (const unit of units) {
+            const unitData = {
+              title: `${formData.title} - ${unit.title}`,
+              type: formData.type,
+              property_type: 'single',
+              parent_property_id: result.property.id,
+              street_address: formData.street_address,
+              city: formData.city,
+              county: formData.county,
+              zip_code: formData.zip_code,
+              location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
+              size: `${unit.size} sq ft`,
+              price: `$${unit.price}/SF/YR`,
+              description: unit.description,
+              available: unit.available,
+              features: unit.features,
+              image: unit.image,
+              gallery: unit.gallery
+            };
+
+            const unitResponse = await fetch('/api/properties', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(unitData)
+            });
+
+            if (!unitResponse.ok) {
+              console.error(`Failed to create unit: ${unit.title}`);
+            } else {
+              console.log(`✅ Unit created: ${unit.title}`);
+            }
+          }
+
+          alert(`Multi-unit building created with ${units.length} units!`);
         }
       }
 
@@ -467,6 +544,7 @@ export default function PropertiesPage() {
     setEditingProperty(null);
     setShowForm(false);
     setCustomFeature('');
+    setUnits([]);
   };
 
   if (loading || roleLoading) {
@@ -698,12 +776,116 @@ export default function PropertiesPage() {
                       </div>
                     )}
 
-                    {/* Multi-Unit Building Note */}
+                    {/* Multi-Unit Building - Units Section */}
                     {formData.property_type === 'multi_unit' && (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                        <p className="text-sm text-blue-800 dark:text-blue-300">
-                          📦 <strong>Multi-Unit Building:</strong> Size and price will be set for each individual unit in the next step.
-                        </p>
+                      <div className="space-y-4">
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                          <p className="text-sm text-blue-800 dark:text-blue-300 mb-2">
+                            📦 <strong>Multi-Unit Building</strong> - Add individual units below
+                          </p>
+                        </div>
+
+                        {/* Units List */}
+                        {units.map((unit, index) => (
+                          <div key={index} className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg p-6">
+                            <div className="flex justify-between items-center mb-4">
+                              <h4 className="text-md font-semibold text-gray-900 dark:text-white">Unit {index + 1}</h4>
+                              <button
+                                type="button"
+                                onClick={() => removeUnit(index)}
+                                className="text-red-600 hover:text-red-700 text-sm font-medium"
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Unit Name */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Unit Name/Number *
+                                </label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={unit.title}
+                                  onChange={(e) => updateUnit(index, 'title', e.target.value)}
+                                  placeholder="Unit A, Suite 101, etc."
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+
+                              {/* Unit Size */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Square Footage *
+                                </label>
+                                <input
+                                  type="number"
+                                  required
+                                  value={unit.size}
+                                  onChange={(e) => updateUnit(index, 'size', e.target.value)}
+                                  placeholder="5000"
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+
+                              {/* Unit Price */}
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                  Price per SF/YR *
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  required
+                                  value={unit.price}
+                                  onChange={(e) => updateUnit(index, 'price', e.target.value)}
+                                  placeholder="8.50"
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </div>
+
+                              {/* Unit Available */}
+                              <div className="flex items-center pt-6">
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={unit.available}
+                                    onChange={(e) => updateUnit(index, 'available', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
+                                  />
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    Available for Lease
+                                  </span>
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Unit Description */}
+                            <div className="mt-4">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Unit Description (optional)
+                              </label>
+                              <textarea
+                                value={unit.description}
+                                onChange={(e) => updateUnit(index, 'description', e.target.value)}
+                                rows={2}
+                                placeholder="Unit-specific details..."
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Add Unit Button */}
+                        <button
+                          type="button"
+                          onClick={addUnit}
+                          className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+                        >
+                          + Add Unit
+                        </button>
                       </div>
                     )}
 
