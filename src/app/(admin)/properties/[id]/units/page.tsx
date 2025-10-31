@@ -493,13 +493,12 @@ export default function ManageUnitsPage() {
                   Unit Images
                 </label>
                 <ImageDropZone
-                  onImagesSelected={handleImageUpload}
+                  onImagesUploaded={handleImageUpload}
                   galleryImages={galleryImages}
                   featuredImageIndex={featuredImageIndex}
-                  onSetFeaturedImage={setFeaturedImage}
+                  onSetFeatured={setFeaturedImage}
                   onRemoveImage={removeGalleryImage}
                   isUploading={uploadingImage}
-                  maxImages={12}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Images will be automatically optimized for web display

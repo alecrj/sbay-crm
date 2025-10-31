@@ -402,6 +402,12 @@ export default function PropertiesPage() {
           console.log(`➕ Creating ${units.length} units...`);
 
           for (const unit of units) {
+            console.log(`📸 Unit "${unit.title}" images:`, {
+              image: unit.image,
+              galleryCount: unit.gallery?.length || 0,
+              gallery: unit.gallery
+            });
+
             const unitData = {
               title: `${formData.title} - ${unit.title}`,
               type: formData.type,
