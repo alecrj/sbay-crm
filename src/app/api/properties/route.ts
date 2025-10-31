@@ -72,7 +72,11 @@ export async function POST(request: NextRequest) {
         .from('property_calendars')
         .insert([{
           property_id: property.id,
-          is_active: true
+          property_title: propertyData.title,
+          property_size: propertyData.size,
+          property_county: propertyData.county,
+          is_active: true,
+          timezone: 'America/New_York'
         }])
 
       if (calendarError) {
