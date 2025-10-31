@@ -6,6 +6,7 @@ import { useUserRole } from '../../../contexts/UserRoleContext';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 import ImageDropZone from '../../../components/properties/ImageDropZone';
+import { uploadPropertyImages } from '../../../lib/image-upload';
 
 interface Property {
   id: string;
@@ -181,25 +182,10 @@ export default function PropertiesPage() {
     setUnits(newUnits);
 
     try {
-      const uploadedUrls: string[] = [];
+      // Use the universal image upload utility with optimization
+      const uploadedUrls = await uploadPropertyImages(files);
 
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await fetch('/api/upload-image', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Unit image uploaded successfully:', data);
-          uploadedUrls.push(data.url);
-        } else {
-          console.error('Failed to upload unit image:', await response.text());
-        }
-      }
+      console.log('Unit images uploaded successfully:', uploadedUrls);
 
       if (uploadedUrls.length > 0) {
         const updatedUnits = [...units];
@@ -222,6 +208,8 @@ export default function PropertiesPage() {
       const updatedUnits = [...units];
       updatedUnits[unitIndex].uploadingImage = false;
       setUnits(updatedUnits);
+      // Show error to user
+      alert(`Failed to upload images: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -258,105 +246,9 @@ export default function PropertiesPage() {
     setUploadingImage(true);
 
     try {
-      const uploadPromises = files.map(async (file, index) => {
-        console.log(`Uploading file ${index + 1}: ${file.name}, size: ${file.size}, type: ${file.type}`);
+      // Use the universal image upload utility with optimization
+      const uploadedUrls = await uploadPropertyImages(files);
 
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          throw new Error(`${file.name} is not an image file`);
-        }
-
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error(`${file.name} must be less than 5MB`);
-        }
-
-        // Create a unique filename with timestamp and random string
-        const fileExt = file.name.split('.').pop();
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2);
-        const fileName = `${timestamp}-${randomStr}.${fileExt}`;
-        const filePath = `properties/${fileName}`;
-
-        console.log(`Uploading to path: ${filePath}`);
-
-        // Check if bucket exists first
-        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-        if (bucketsError) {
-          console.error('Error listing buckets:', bucketsError);
-        } else {
-          console.log('Available buckets:', buckets.map(b => b.name));
-        }
-
-        // Try to upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('property-images')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Supabase upload error:', uploadError);
-
-          // If bucket doesn't exist, try to create it
-          if (uploadError.message.includes('Bucket not found')) {
-            console.log('Bucket not found, attempting to create...');
-            const { error: createBucketError } = await supabase.storage.createBucket('property-images', {
-              public: true,
-              allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp'],
-              fileSizeLimit: 5242880 // 5MB
-            });
-
-            if (createBucketError) {
-              console.error('Failed to create bucket:', createBucketError);
-              throw new Error(`Failed to upload ${file.name}: Bucket creation failed - ${createBucketError.message}`);
-            }
-
-            console.log('Bucket created successfully, retrying upload...');
-
-            // Try upload again after creating bucket
-            const { data: retryUploadData, error: retryUploadError } = await supabase.storage
-              .from('property-images')
-              .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false
-              });
-
-            if (retryUploadError) {
-              throw new Error(`Failed to upload ${file.name} after bucket creation: ${retryUploadError.message}`);
-            }
-
-            console.log('Retry upload successful:', retryUploadData);
-          } else {
-            throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-          }
-        }
-
-        console.log('Upload successful:', uploadData);
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('property-images')
-          .getPublicUrl(filePath);
-
-        console.log('Generated public URL:', urlData.publicUrl);
-
-        // Verify the URL is accessible
-        try {
-          const testResponse = await fetch(urlData.publicUrl, { method: 'HEAD' });
-          console.log('Image URL test response:', testResponse.status, testResponse.statusText);
-          if (!testResponse.ok) {
-            console.warn('Image URL not accessible:', urlData.publicUrl);
-          }
-        } catch (error) {
-          console.error('Error testing image URL:', error);
-        }
-
-        return urlData.publicUrl;
-      });
-
-      const uploadedUrls = await Promise.all(uploadPromises);
       console.log('All uploads completed:', uploadedUrls);
 
       // Add new images to gallery and form data

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import ImageDropZone from '@/components/properties/ImageDropZone';
+import { uploadPropertyImages } from '@/lib/image-upload';
 
 interface Property {
   id: string;
@@ -48,6 +50,11 @@ export default function ManageUnitsPage() {
     gallery: [] as string[]
   });
 
+  // Image gallery state
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [featuredImageIndex, setFeaturedImageIndex] = useState(0);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   // Load parent property and its units
   useEffect(() => {
     loadData();
@@ -90,6 +97,59 @@ export default function ManageUnitsPage() {
     }
   };
 
+  // Image upload handlers
+  const handleImageUpload = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+
+    console.log('Starting image upload for', files.length, 'files');
+    setUploadingImage(true);
+
+    try {
+      // Use the universal image upload utility with optimization
+      const uploadedUrls = await uploadPropertyImages(files);
+
+      console.log('All uploads completed:', uploadedUrls);
+
+      // Add new images to gallery
+      const newGallery = [...galleryImages, ...uploadedUrls];
+      setGalleryImages(newGallery);
+      setUnitFormData(prev => ({ ...prev, gallery: newGallery }));
+
+      // Set first uploaded image as featured if no featured image exists
+      if (galleryImages.length === 0 && uploadedUrls.length > 0) {
+        setUnitFormData(prev => ({ ...prev, image: uploadedUrls[0] }));
+        setFeaturedImageIndex(0);
+      }
+
+      alert(`Successfully uploaded ${uploadedUrls.length} image(s)!`);
+
+    } catch (error: any) {
+      console.error('Error uploading images:', error);
+      alert(`Error uploading images: ${error.message}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const setFeaturedImage = (imageUrl: string, index: number) => {
+    setUnitFormData(prev => ({ ...prev, image: imageUrl }));
+    setFeaturedImageIndex(index);
+  };
+
+  const removeGalleryImage = (index: number) => {
+    const newGallery = galleryImages.filter((_, i) => i !== index);
+    setGalleryImages(newGallery);
+    setUnitFormData(prev => ({ ...prev, gallery: newGallery }));
+
+    // If removed image was featured, set new featured image
+    if (index === featuredImageIndex) {
+      setFeaturedImageIndex(0);
+      setUnitFormData(prev => ({ ...prev, image: newGallery[0] || '' }));
+    } else if (index < featuredImageIndex) {
+      setFeaturedImageIndex(featuredImageIndex - 1);
+    }
+  };
+
   const handleAddUnit = () => {
     setEditingUnit(null);
     setUnitFormData({
@@ -103,11 +163,14 @@ export default function ManageUnitsPage() {
       image: '',
       gallery: []
     });
+    setGalleryImages([]);
+    setFeaturedImageIndex(0);
     setShowUnitForm(true);
   };
 
   const handleEditUnit = (unit: any) => {
     setEditingUnit(unit);
+    const unitGallery = unit.gallery || [];
     setUnitFormData({
       title: unit.title,
       type: unit.type || 'warehouse',
@@ -117,8 +180,12 @@ export default function ManageUnitsPage() {
       available: unit.available,
       features: unit.features || [],
       image: unit.image || '',
-      gallery: unit.gallery || []
+      gallery: unitGallery
     });
+    setGalleryImages(unitGallery);
+    // Find featured image index
+    const featuredIndex = unitGallery.findIndex((img: string) => img === unit.image);
+    setFeaturedImageIndex(featuredIndex >= 0 ? featuredIndex : 0);
     setShowUnitForm(true);
   };
 
@@ -420,10 +487,29 @@ export default function ManageUnitsPage() {
                 />
               </div>
 
-              {/* Image URL */}
+              {/* Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Image URL
+                  Unit Images
+                </label>
+                <ImageDropZone
+                  onImagesSelected={handleImageUpload}
+                  galleryImages={galleryImages}
+                  featuredImageIndex={featuredImageIndex}
+                  onSetFeaturedImage={setFeaturedImage}
+                  onRemoveImage={removeGalleryImage}
+                  isUploading={uploadingImage}
+                  maxImages={12}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  Images will be automatically optimized for web display
+                </p>
+              </div>
+
+              {/* Image URL (Optional - for external images) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Image URL (Optional)
                 </label>
                 <input
                   type="url"
@@ -433,7 +519,7 @@ export default function ManageUnitsPage() {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Enter a direct link to the unit's main image
+                  Or enter a direct link to use an external image
                 </p>
               </div>
 
