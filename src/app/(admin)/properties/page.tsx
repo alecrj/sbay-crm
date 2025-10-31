@@ -762,8 +762,8 @@ export default function PropertiesPage() {
                         onChange={(e) => setFormData({...formData, property_type: e.target.value as 'single' | 'multi_unit'})}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="single">Single Property (Standard listing)</option>
-                        <option value="multi_unit">Multi-Unit Building (Add units after saving)</option>
+                        <option value="single">Single Property</option>
+                        <option value="multi_unit">Multi-Unit Building</option>
                       </select>
                       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                         {formData.property_type === 'single'
