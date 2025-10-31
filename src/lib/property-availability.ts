@@ -43,7 +43,11 @@ export async function checkPropertyAvailability(
     }
 
     // Check if the date is blocked
-    const appointmentDate = startTime.toISOString().split('T')[0];
+    // Format date as YYYY-MM-DD in local timezone to avoid UTC conversion issues
+    const year = startTime.getFullYear();
+    const month = String(startTime.getMonth() + 1).padStart(2, '0');
+    const day = String(startTime.getDate()).padStart(2, '0');
+    const appointmentDate = `${year}-${month}-${day}`;
 
     const { data: blockedDates, error: blockedError } = await supabaseAdmin
       .from('calendar_blocked_dates')
