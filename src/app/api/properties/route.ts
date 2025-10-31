@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   try {
     const rawPropertyData = await request.json()
 
-    console.log('Creating property with pure REST API approach...')
+    console.log('Creating property with direct insert approach...')
 
     // Clean and validate property data
     const propertyData = {
@@ -37,84 +37,72 @@ export async function POST(request: NextRequest) {
       state: rawPropertyData.state?.trim() || 'FL',
       type: rawPropertyData.type?.toLowerCase()?.trim() || 'warehouse',
       available: rawPropertyData.available !== undefined ? rawPropertyData.available : true,
-      featured: rawPropertyData.featured !== undefined ? rawPropertyData.featured : false
+      featured: rawPropertyData.featured !== undefined ? rawPropertyData.featured : false,
+      // Ensure property_type and parent_property_id are included
+      property_type: rawPropertyData.property_type || 'single',
+      parent_property_id: rawPropertyData.parent_property_id || null
     }
 
     console.log('Raw property data received:', rawPropertyData)
     console.log('Cleaned property data:', propertyData)
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+    // Insert property directly using supabaseAdmin
+    const { data: property, error: propertyError } = await supabaseAdmin
+      .from('properties')
+      .insert([propertyData])
+      .select()
+      .single()
 
-    // Debug logging for authentication
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!supabaseUrl,
-      hasServiceKey: !!serviceKey,
-      serviceKeyLength: serviceKey?.length || 0
-    })
-
-    if (!supabaseUrl || !serviceKey) {
-      console.error('Missing environment variables:', { supabaseUrl: !!supabaseUrl, serviceKey: !!serviceKey })
+    if (propertyError) {
+      console.error('Error creating property:', propertyError)
       return NextResponse.json({
-        error: 'Server configuration error: Missing database credentials'
+        error: `Failed to create property: ${propertyError.message}`,
+        details: propertyError
       }, { status: 500 })
     }
 
-    // Use the database function via pure REST API (this is guaranteed to work)
-    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/create_property_with_calendar`, {
-      method: 'POST',
-      headers: {
-        'apikey': serviceKey,
-        'Authorization': `Bearer ${serviceKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({ property_data: propertyData })
-    })
+    console.log('Property created successfully:', { propertyId: property.id, propertyType: propertyData.property_type })
 
-    console.log('Database function response status:', response.status, response.statusText)
+    // Create calendar ONLY for single properties (standalone properties AND units)
+    // Do NOT create calendar for multi-unit buildings (they're just containers)
+    if (propertyData.property_type === 'single') {
+      console.log('Creating calendar for single property/unit:', property.id)
 
-    if (response.ok) {
-      const functionResult = await response.json()
-      console.log('Property and calendar created successfully via REST API', { propertyId: functionResult?.id })
+      const { error: calendarError } = await supabaseAdmin
+        .from('property_calendars')
+        .insert([{
+          property_id: property.id,
+          is_active: true
+        }])
 
-      // Trigger website rebuild webhook
-      try {
-        const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;
-        if (webhookUrl) {
-          console.log('Triggering website rebuild...');
-          fetch(webhookUrl, { method: 'POST' }).catch(err =>
-            console.error('Webhook failed:', err)
-          );
-        }
-      } catch (error) {
-        console.error('Webhook error:', error);
+      if (calendarError) {
+        console.error('Error creating calendar:', calendarError)
+        // Don't fail the whole request if calendar creation fails
+      } else {
+        console.log('Calendar created successfully for property:', property.id)
       }
-
-      return NextResponse.json({
-        success: true,
-        property: functionResult,
-        message: 'Property and calendar created successfully'
-      })
     } else {
-      const errorData = await response.json()
-      console.error('Database function failed:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData,
-        requestUrl: `${supabaseUrl}/rest/v1/rpc/create_property_with_calendar`,
-        hasServiceKey: !!serviceKey
-      })
-
-      return NextResponse.json({
-        error: `Failed to create property: ${errorData.message || 'Unknown error'}`,
-        details: errorData,
-        debug: {
-          status: response.status,
-          statusText: response.statusText
-        }
-      }, { status: response.status })
+      console.log('Skipping calendar creation for multi-unit building (not bookable):', property.id)
     }
+
+    // Trigger website rebuild webhook
+    try {
+      const webhookUrl = process.env.WEBSITE_BUILD_HOOK_URL;
+      if (webhookUrl) {
+        console.log('Triggering website rebuild...');
+        fetch(webhookUrl, { method: 'POST' }).catch(err =>
+          console.error('Webhook failed:', err)
+        );
+      }
+    } catch (error) {
+      console.error('Webhook error:', error);
+    }
+
+    return NextResponse.json({
+      success: true,
+      property: property,
+      message: 'Property created successfully'
+    })
   } catch (error: any) {
     console.error('API error:', error)
     return NextResponse.json({

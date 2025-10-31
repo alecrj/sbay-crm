@@ -21,6 +21,8 @@ export interface Property {
   id: string
   title: string
   type: 'warehouse' | 'office' | 'industrial' | 'flex-space' | 'distribution'
+  property_type?: 'single' | 'multi_unit'
+  parent_property_id?: string
   location: string
   county?: 'Miami-Dade' | 'Broward' | 'Palm Beach' | 'St. Lucie'
   price: string

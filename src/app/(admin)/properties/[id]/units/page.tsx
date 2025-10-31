@@ -38,6 +38,7 @@ export default function ManageUnitsPage() {
 
   const [unitFormData, setUnitFormData] = useState({
     title: '',
+    type: 'warehouse' as 'warehouse' | 'office' | 'industrial' | 'flex-space' | 'distribution',
     size: '',
     price: '',
     description: '',
@@ -93,6 +94,7 @@ export default function ManageUnitsPage() {
     setEditingUnit(null);
     setUnitFormData({
       title: '',
+      type: parentProperty?.type || 'warehouse',
       size: '',
       price: '',
       description: '',
@@ -104,13 +106,14 @@ export default function ManageUnitsPage() {
     setShowUnitForm(true);
   };
 
-  const handleEditUnit = (unit: Unit) => {
+  const handleEditUnit = (unit: any) => {
     setEditingUnit(unit);
     setUnitFormData({
       title: unit.title,
+      type: unit.type || 'warehouse',
       size: unit.size?.replace(' sq ft', '') || '',
       price: unit.price?.replace(/[$\/SF\/YR]/g, '') || '',
-      description: '',
+      description: unit.description || '',
       available: unit.available,
       features: unit.features || [],
       image: unit.image || '',
@@ -132,6 +135,7 @@ export default function ManageUnitsPage() {
         city: parentProperty.city,
         county: parentProperty.county,
         zip_code: parentProperty.zip_code,
+        state: 'FL',
         location: `${parentProperty.city}, ${parentProperty.county}, FL`,
         // Format fields
         size: `${unitFormData.size} sq ft`,
@@ -140,24 +144,38 @@ export default function ManageUnitsPage() {
         property_type: 'single',
         // Link to parent
         parent_property_id: propertyId,
-        type: parentProperty.type || 'warehouse'
+        // Use unit's own type (not parent's)
+        type: unitFormData.type
       };
 
       if (editingUnit) {
-        // Update existing unit
-        const { error } = await supabase
-          .from('properties')
-          .update(unitData)
-          .eq('id', editingUnit.id);
+        // Update existing unit via API
+        const response = await fetch(`/api/properties?id=${editingUnit.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(unitData)
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to update unit');
+        }
       } else {
-        // Create new unit
-        const { error } = await supabase
-          .from('properties')
-          .insert([unitData]);
+        // Create new unit via API
+        const response = await fetch('/api/properties', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(unitData)
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to create unit');
+        }
       }
 
       // Reload units
@@ -165,7 +183,7 @@ export default function ManageUnitsPage() {
       setShowUnitForm(false);
     } catch (error) {
       console.error('Error saving unit:', error);
-      alert('Failed to save unit');
+      alert(`Failed to save unit: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -338,6 +356,25 @@ export default function ManageUnitsPage() {
                 />
               </div>
 
+              {/* Property Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Property Type *
+                </label>
+                <select
+                  required
+                  value={unitFormData.type}
+                  onChange={(e) => setUnitFormData({ ...unitFormData, type: e.target.value as any })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="warehouse">Warehouse</option>
+                  <option value="office">Office</option>
+                  <option value="industrial">Industrial</option>
+                  <option value="flex-space">Flex Space</option>
+                  <option value="distribution">Distribution</option>
+                </select>
+              </div>
+
               {/* Size and Price */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -381,6 +418,23 @@ export default function ManageUnitsPage() {
                   placeholder="Unit-specific details..."
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              {/* Image URL */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Image URL
+                </label>
+                <input
+                  type="url"
+                  value={unitFormData.image}
+                  onChange={(e) => setUnitFormData({ ...unitFormData, image: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Enter a direct link to the unit's main image
+                </p>
               </div>
 
               {/* Available Checkbox */}
