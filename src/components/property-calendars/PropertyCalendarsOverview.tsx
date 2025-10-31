@@ -125,7 +125,7 @@ const PropertyCalendarsOverview: React.FC = () => {
   };
 
   const deleteAllCalendars = async () => {
-    if (!confirm(`Are you sure you want to delete ALL ${properties.length} orphaned calendars? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete ALL ${properties.length} calendars? This action cannot be undone.`)) {
       return;
     }
 
@@ -273,7 +273,7 @@ const PropertyCalendarsOverview: React.FC = () => {
               disabled={deleting.size > 0}
               className="px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Delete All Orphaned
+              Delete All Calendars
             </button>
           )}
         </div>
