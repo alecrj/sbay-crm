@@ -22,8 +22,9 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
   const [draggedFiles, setDraggedFiles] = useState<File[]>([]);
 
   const onDrop = (acceptedFiles: File[]) => {
-    console.log('ImageDropZone onDrop called with', acceptedFiles.length, 'files');
-    console.log('Current gallery images:', galleryImages.length);
+    console.log('🎯 ImageDropZone onDrop called with', acceptedFiles.length, 'files');
+    console.log('📊 Current gallery images:', galleryImages.length);
+    console.log('📁 Accepted files:', acceptedFiles.map(f => f.name));
 
     // Check if adding these files would exceed the 12 image limit
     const totalImages = galleryImages.length + acceptedFiles.length;
@@ -31,9 +32,11 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
       const allowedFiles = acceptedFiles.slice(0, 12 - galleryImages.length);
       alert(`You can only upload up to 12 images per property. Only uploading ${allowedFiles.length} images.`);
       setDraggedFiles(allowedFiles);
+      console.log('🚀 Calling onImagesUploaded with limited files:', allowedFiles.length);
       onImagesUploaded(allowedFiles);
     } else {
       setDraggedFiles(acceptedFiles);
+      console.log('🚀 Calling onImagesUploaded with all files:', acceptedFiles.length);
       onImagesUploaded(acceptedFiles);
     }
   };

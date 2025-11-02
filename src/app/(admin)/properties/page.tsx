@@ -172,9 +172,15 @@ export default function PropertiesPage() {
 
   // Unit image upload handlers
   const handleUnitImageUpload = async (unitIndex: number, files: File[]) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      console.log(`⚠️ handleUnitImageUpload called for unit ${unitIndex} with no files`);
+      return;
+    }
 
-    console.log(`Starting unit ${unitIndex} image upload for`, files.length, 'files');
+    console.log(`🖼️ UNIT ${unitIndex} IMAGE UPLOAD STARTED`);
+    console.log(`Unit title: ${units[unitIndex]?.title}`);
+    console.log(`Files to upload: ${files.length}`);
+    console.log(`Current unit gallery size: ${units[unitIndex]?.galleryImages?.length || 0}`);
 
     // Set uploading state for this unit
     const newUnits = [...units];
@@ -183,9 +189,10 @@ export default function PropertiesPage() {
 
     try {
       // Use the universal image upload utility with optimization
+      console.log(`📤 Calling uploadPropertyImages for unit ${unitIndex}...`);
       const uploadedUrls = await uploadPropertyImages(files);
 
-      console.log('Unit images uploaded successfully:', uploadedUrls);
+      console.log(`✅ Unit ${unitIndex} images uploaded successfully:`, uploadedUrls);
 
       if (uploadedUrls.length > 0) {
         const updatedUnits = [...units];
@@ -240,24 +247,34 @@ export default function PropertiesPage() {
   };
 
   const handleImageUpload = async (files: File[]) => {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      console.log('⚠️ handleImageUpload called with no files');
+      return;
+    }
 
-    console.log('Starting image upload for', files.length, 'files');
+    console.log('🖼️ MAIN PROPERTY IMAGE UPLOAD STARTED');
+    console.log('Property type:', formData.property_type);
+    console.log('Files to upload:', files.length);
+    console.log('Current gallery size:', galleryImages.length);
+
     setUploadingImage(true);
 
     try {
       // Use the universal image upload utility with optimization
+      console.log('📤 Calling uploadPropertyImages...');
       const uploadedUrls = await uploadPropertyImages(files);
 
-      console.log('All uploads completed:', uploadedUrls);
+      console.log('✅ All uploads completed:', uploadedUrls);
 
       // Add new images to gallery and form data
       const newGallery = [...galleryImages, ...uploadedUrls];
+      console.log('📝 Updating gallery state:', newGallery);
       setGalleryImages(newGallery);
       setFormData(prev => ({ ...prev, gallery: newGallery }));
 
       // Set first uploaded image as featured if no featured image exists
       if (galleryImages.length === 0 && uploadedUrls.length > 0) {
+        console.log('⭐ Setting featured image:', uploadedUrls[0]);
         setFormData(prev => ({ ...prev, image: uploadedUrls[0] }));
         setFeaturedImageIndex(0);
       }
@@ -266,10 +283,11 @@ export default function PropertiesPage() {
       alert(`Successfully uploaded ${uploadedUrls.length} image(s)!`);
 
     } catch (error: any) {
-      console.error('Error uploading images:', error);
+      console.error('❌ Error uploading images:', error);
       alert(`Error uploading images: ${error.message}`);
     } finally {
       setUploadingImage(false);
+      console.log('🏁 Upload process finished');
     }
   };
 
