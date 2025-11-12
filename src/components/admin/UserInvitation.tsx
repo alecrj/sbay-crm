@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface UserInvitationProps {
   onUserInvited?: () => void;
 }
 
 const UserInvitation: React.FC<UserInvitationProps> = ({ onUserInvited }) => {
+  const { session } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     name: '',
@@ -23,10 +25,15 @@ const UserInvitation: React.FC<UserInvitationProps> = ({ onUserInvited }) => {
     setInvitedUser(null);
 
     try {
+      if (!session?.access_token) {
+        throw new Error('No active session. Please log in again.');
+      }
+
       const response = await fetch('/api/admin/invite-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(formData),
       });
