@@ -21,6 +21,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
   const [inviteRole, setInviteRole] = useState('agent');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,8 +38,23 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase.auth.admin.listUsers();
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No active session');
+      }
+
+      const response = await fetch('/api/admin/list-users', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch users');
+      }
+
       setUsers(data.users);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -55,28 +71,33 @@ export default function UsersPage() {
     setSuccess('');
 
     try {
-      // For now, we'll create a temporary password and ask user to reset
-      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No active session');
+      }
 
-      const { data, error } = await supabase.auth.admin.createUser({
-        email: inviteEmail,
-        password: tempPassword,
-        user_metadata: {
-          role: inviteRole,
-          invited_by: user?.id,
+      const response = await fetch('/api/admin/invite-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
-        email_confirm: true,
+        body: JSON.stringify({
+          email: inviteEmail,
+          name: inviteName,
+          role: inviteRole
+        })
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      // Send password reset email
-      await supabase.auth.resetPasswordForEmail(inviteEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to invite user');
+      }
 
-      setSuccess(`User invited successfully! They will receive an email to set their password.`);
+      setSuccess(`User invited successfully! Temporary password: ${data.tempPassword}`);
       setInviteEmail('');
+      setInviteName('');
       setShowInviteForm(false);
       fetchUsers();
     } catch (error: any) {
@@ -90,8 +111,23 @@ export default function UsersPage() {
     if (!confirm(`Are you sure you want to delete user ${email}?`)) return;
 
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No active session');
+      }
+
+      const response = await fetch(`/api/admin/delete-user?userId=${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete user');
+      }
 
       setSuccess('User deleted successfully');
       fetchUsers();
@@ -157,6 +193,19 @@ export default function UsersPage() {
             <form onSubmit={handleInviteUser}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  placeholder="John Smith"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email Address
                 </label>
                 <input
@@ -164,6 +213,7 @@ export default function UsersPage() {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  placeholder="john@example.com"
                   required
                 />
               </div>
