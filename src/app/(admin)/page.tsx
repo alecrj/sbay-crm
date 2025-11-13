@@ -90,14 +90,14 @@ export default function CRMDashboard() {
             </div>
             <div className="flex items-center justify-center sm:justify-end gap-4">
               <a
-                href="/invitations"
+                href="/users"
                 className="bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl transition-all duration-200 flex items-center gap-2 border border-white/20 hover:border-white/30 hover:scale-105 text-sm sm:text-base"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <span className="hidden sm:inline">Invite User</span>
-                <span className="sm:hidden">Invite</span>
+                <span className="hidden sm:inline">Manage Users</span>
+                <span className="sm:hidden">Users</span>
               </a>
             </div>
           </div>
