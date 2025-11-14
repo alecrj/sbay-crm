@@ -69,6 +69,17 @@ export default function LoginPage() {
     try {
       const { error } = await signIn(email, password);
       if (error) throw error;
+
+      // Check if they logged in with temporary password "123456"
+      if (password === '123456') {
+        // Force password reset
+        setIsPasswordReset(true);
+        setPassword('');
+        setConfirmPassword('');
+        setMessage('You are using a temporary password. Please set a new password to continue.');
+        setLoading(false);
+        return;
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.message?.includes('Invalid login credentials')) {
