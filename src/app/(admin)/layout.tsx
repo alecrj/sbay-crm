@@ -1,12 +1,10 @@
 "use client";
 
-import { useSidebar } from "@/context/SidebarContext";
-import AppHeader from "@/layout/AppHeader";
-import AppSidebar from "@/layout/AppSidebar";
-import Backdrop from "@/layout/Backdrop";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import BrowserNotifications from "@/components/notifications/BrowserNotifications";
+import DarkModeToggle from "@/components/DarkModeToggle";
+import { useAuth } from "@/contexts/AuthContext";
 import React from "react";
 
 export default function AdminLayout({
@@ -14,52 +12,50 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isExpanded, isHovered, isMobileOpen } = useSidebar();
-
-  // Dynamic class for main content margin based on sidebar state
-  const mainContentMargin = isMobileOpen
-    ? "ml-0"
-    : isExpanded || isHovered
-    ? "lg:ml-[290px]"
-    : "lg:ml-[90px]";
+  const { signOut } = useAuth();
 
   return (
     <ProtectedRoute>
       <BrowserNotifications>
-        <div className="min-h-screen xl:flex">
-          {/* Sidebar and Backdrop - Hidden on mobile */}
-          <div className="hidden lg:block">
-            <AppSidebar />
-            <Backdrop />
-          </div>
-
-          {/* Main Content Area */}
-          <div
-            className={`flex-1 transition-all duration-300 ease-in-out ${
-              isMobileOpen ? "ml-0" : "lg:ml-[90px] xl:ml-[290px]"
-            }`}
-          >
-            {/* Header - Hidden on mobile below lg */}
-            <div className="hidden lg:block">
-              <AppHeader />
-            </div>
-
-            {/* Mobile Header */}
-            <div className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-              <div className="flex items-center">
-                <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-                  CRM Dashboard
-                </h1>
+        <div className="min-h-screen">
+          {/* Header */}
+          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <a href="/" className="flex items-center hover:opacity-80 transition-opacity">
+                {/* Dark logo for light mode */}
+                <img
+                  src="/images/sbalogo.png"
+                  alt="Shallow Bay Advisors"
+                  className="h-15 w-auto dark:hidden"
+                />
+                {/* White logo for dark mode */}
+                <img
+                  src="/images/sba-white.png"
+                  alt="Shallow Bay Advisors"
+                  className="h-15 w-auto hidden dark:block"
+                />
+              </a>
+              <div className="flex items-center gap-2">
+                <DarkModeToggle />
+                <button
+                  onClick={signOut}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Sign Out
+                </button>
               </div>
             </div>
-
-            {/* Page Content with mobile bottom padding */}
-            <div className="p-3 mx-auto max-w-7xl sm:p-4 lg:p-6 pb-20 lg:pb-6">
-              {children}
-            </div>
           </div>
 
-          {/* Mobile Bottom Navigation */}
+          {/* Page Content with bottom padding for nav */}
+          <div className="p-3 mx-auto max-w-7xl sm:p-4 lg:p-6 pb-20">
+            {children}
+          </div>
+
+          {/* Bottom Navigation */}
           <MobileBottomNav />
         </div>
       </BrowserNotifications>

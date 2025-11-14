@@ -160,7 +160,7 @@ export default function LoginPage() {
             {isPasswordReset ? 'Set New Password' : 'Welcome Back'}
           </h2>
           <p className="mt-2 text-blue-200">
-            {isPasswordReset ? 'Create your new password' : 'Professional CRM by alecrj software'}
+            {isPasswordReset ? 'Create your new password' : 'Shallow Bay CRM'}
           </p>
         </div>
 

@@ -82,7 +82,7 @@ const MobileBottomNav: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50 lg:hidden">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-50">
       <div className="flex justify-around items-center py-1 px-1">
         {navItems.map((item) => (
           <Link

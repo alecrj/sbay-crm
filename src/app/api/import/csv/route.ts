@@ -85,7 +85,19 @@ export async function POST(request: NextRequest) {
           if (columnIndex !== undefined && columnIndex < row.length) {
             const value = row[columnIndex]?.replace(/^"|"$/g, '').trim(); // Remove quotes
             if (value) {
-              leadData[field] = value;
+              // Handle status field - validate it matches allowed values
+              if (field === 'status') {
+                const allowedStatuses = ['new', 'tour-scheduled', 'canceled-no-show', 'showing-completed', 'won', 'lost'];
+                const normalizedStatus = value.toLowerCase().replace(/\s+/g, '-');
+                if (allowedStatuses.includes(normalizedStatus)) {
+                  leadData[field] = normalizedStatus;
+                } else {
+                  // Default to 'new' if invalid status
+                  leadData[field] = 'new';
+                }
+              } else {
+                leadData[field] = value;
+              }
             }
           }
         });

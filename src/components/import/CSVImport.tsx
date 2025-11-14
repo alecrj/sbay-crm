@@ -31,9 +31,14 @@ const CSVImport: React.FC = () => {
   const crmFields = [
     { key: 'name', label: 'Name *', required: true },
     { key: 'email', label: 'Email *', required: true },
-    { key: 'phone', label: 'Phone', required: false },
-    { key: 'company', label: 'Company', required: false },
+    { key: 'phone', label: 'Contact (Phone)', required: false },
+    { key: 'company', label: 'Business', required: false },
+    { key: 'space_requirements', label: 'Sq Ft', required: false },
+    { key: 'property_interest', label: 'Property', required: false },
     { key: 'message', label: 'Notes', required: false },
+    { key: 'status', label: 'Status', required: false },
+    { key: 'follow_up_date', label: 'Follow Up', required: false },
+    { key: 'consultation_date', label: 'Date Shown', required: false },
   ];
 
   const parseCSVLine = (line: string): string[] => {
