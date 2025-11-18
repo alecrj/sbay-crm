@@ -390,6 +390,58 @@ export default function PropertiesPage() {
         }
 
         console.log('✅ Property updated successfully via API');
+
+        // If this is a multi-unit property, create any NEW units (ones without an id)
+        if (formData.property_type === 'multi_unit' && units.length > 0) {
+          const newUnits = units.filter(unit => !unit.id); // Only units without an id are new
+
+          if (newUnits.length > 0) {
+            console.log(`➕ Creating ${newUnits.length} new units...`);
+
+            for (const unit of newUnits) {
+              console.log(`📸 Unit "${unit.title}" images:`, {
+                image: unit.image,
+                galleryCount: unit.gallery?.length || 0,
+                gallery: unit.gallery
+              });
+
+              const unitData = {
+                title: `${formData.title} - ${unit.title}`,
+                type: formData.type,
+                property_type: 'single',
+                parent_property_id: editingProperty.id,
+                street_address: formData.street_address,
+                city: formData.city,
+                county: formData.county,
+                zip_code: formData.zip_code,
+                location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
+                size: `${unit.size} sq ft`,
+                price: `$${unit.price}/SF/YR`,
+                description: unit.description,
+                available: unit.available,
+                features: unit.features,
+                image: unit.image,
+                gallery: unit.gallery
+              };
+
+              const unitResponse = await fetch('/api/properties', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(unitData)
+              });
+
+              if (!unitResponse.ok) {
+                console.error(`Failed to create unit: ${unit.title}`);
+              } else {
+                console.log(`✅ Unit created: ${unit.title}`);
+              }
+            }
+
+            alert(`Added ${newUnits.length} new unit(s) to the building!`);
+          }
+        }
       } else {
         console.log('➕ Creating new property...');
 
@@ -483,7 +535,7 @@ export default function PropertiesPage() {
     }
   };
 
-  const handleEdit = (property: any) => {
+  const handleEdit = async (property: any) => {
     setEditingProperty(property);
     const galleryArray = Array.isArray(property.gallery) ? property.gallery : [];
     setFormData({
@@ -510,6 +562,44 @@ export default function PropertiesPage() {
     if (property.image && galleryArray.length > 0) {
       const featuredIndex = galleryArray.findIndex(img => img === property.image);
       setFeaturedImageIndex(featuredIndex >= 0 ? featuredIndex : 0);
+    }
+
+    // If this is a multi-unit property, fetch its existing units
+    if (property.property_type === 'multi_unit') {
+      console.log('📦 Loading existing units for property:', property.id);
+      try {
+        const { data: existingUnits, error } = await supabase
+          .from('properties')
+          .select('*')
+          .eq('parent_property_id', property.id)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.error('Error loading units:', error);
+        } else if (existingUnits && existingUnits.length > 0) {
+          console.log(`✅ Loaded ${existingUnits.length} existing units`);
+
+          // Convert existing units to the format expected by the form
+          const formattedUnits = existingUnits.map(unit => ({
+            id: unit.id, // Include the ID so we know it's an existing unit
+            title: unit.title.replace(`${property.title} - `, ''), // Remove parent title prefix
+            size: unit.size ? unit.size.replace(/[^\d]/g, '') : '',
+            price: unit.price ? unit.price.replace(/[^\d.]/g, '') : '',
+            description: unit.description || '',
+            available: unit.available,
+            features: unit.features || [],
+            image: unit.image || '',
+            gallery: Array.isArray(unit.gallery) ? unit.gallery : [],
+            galleryImages: Array.isArray(unit.gallery) ? unit.gallery : [],
+            featuredImageIndex: 0,
+            uploadingImage: false
+          }));
+
+          setUnits(formattedUnits);
+        }
+      } catch (error) {
+        console.error('Error fetching units:', error);
+      }
     }
 
     setShowForm(true);
