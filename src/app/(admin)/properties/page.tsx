@@ -365,7 +365,7 @@ export default function PropertiesPage() {
       // Format the data properly for storage
       const propertyData = {
         ...formData,
-        price: `$${formData.price}/SF/YR`,
+        price: `$${formData.price}/month`,
         size: `${formData.size} sq ft`,
         location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
         gallery: galleryImages.filter(img => img.trim() !== "")
@@ -416,7 +416,7 @@ export default function PropertiesPage() {
                 zip_code: formData.zip_code,
                 location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
                 size: `${unit.size} sq ft`,
-                price: `$${unit.price}/SF/YR`,
+                price: `$${unit.price}/month`,
                 description: unit.description,
                 available: unit.available,
                 features: unit.features,
@@ -489,7 +489,7 @@ export default function PropertiesPage() {
               zip_code: formData.zip_code,
               location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
               size: `${unit.size} sq ft`,
-              price: `$${unit.price}/SF/YR`,
+              price: `$${unit.price}/month`,
               description: unit.description,
               available: unit.available,
               features: unit.features,
@@ -866,7 +866,7 @@ export default function PropertiesPage() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Price per Square Foot *
+                            Monthly Lease Rate *
                           </label>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
@@ -877,9 +877,9 @@ export default function PropertiesPage() {
                               value={formData.price}
                               onChange={(e) => setFormData({...formData, price: e.target.value})}
                               className="w-full pl-8 pr-20 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="8.50"
+                              placeholder="5000"
                             />
-                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">/SF/YR</span>
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">/month</span>
                           </div>
                         </div>
                       </div>
@@ -942,7 +942,7 @@ export default function PropertiesPage() {
                               {/* Unit Price */}
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                  Price per SF/YR *
+                                  Monthly Lease Rate *
                                 </label>
                                 <input
                                   type="number"
@@ -950,7 +950,7 @@ export default function PropertiesPage() {
                                   required
                                   value={unit.price}
                                   onChange={(e) => updateUnit(index, 'price', e.target.value)}
-                                  placeholder="8.50"
+                                  placeholder="5000"
                                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                               </div>
