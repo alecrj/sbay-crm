@@ -50,11 +50,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify property exists
+    // Check if this is a unit in a multi-unit building
+    // If so, we need to use the parent building's calendar
+    let calendarPropertyId = propertyId;
+
+    const { data: propertyData, error: propError } = await supabase
+      .from('properties')
+      .select('id, title, parent_property_id')
+      .eq('id', propertyId)
+      .single();
+
+    if (propError || !propertyData) {
+      return NextResponse.json(
+        { error: 'Property not found' },
+        { status: 404, headers: corsHeaders }
+      );
+    }
+
+    // If this is a unit (has parent_property_id), use the parent's calendar
+    if (propertyData.parent_property_id) {
+      calendarPropertyId = propertyData.parent_property_id;
+      console.log(`Unit detected. Using parent building calendar: ${calendarPropertyId}`);
+    }
+
+    // Verify calendar exists for the property (or parent building)
     const { data: property, error: propertyError } = await supabase
       .from('property_calendars')
       .select('id, property_title, is_active')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .single();
 
     if (propertyError || !property) {
@@ -74,7 +97,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get available time slots
+    // Get available time slots using the original propertyId
+    // The getAvailableTimeSlots function will handle parent lookup internally
     const slots = await getAvailableTimeSlots(propertyId, date, duration);
 
     // Format slots for frontend consumption
