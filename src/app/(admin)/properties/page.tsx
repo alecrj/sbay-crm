@@ -12,6 +12,7 @@ interface Property {
   id: string;
   title: string;
   type: string;
+  property_type?: string;
   location: string;
   size: string;
   price: string;
@@ -29,6 +30,8 @@ export default function PropertiesPage() {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
+  const [propertyUnits, setPropertyUnits] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -318,11 +321,45 @@ export default function PropertiesPage() {
     loadProperties();
   }, []);
 
+  const togglePropertyExpand = async (propertyId: string, propertyType: string) => {
+    const newExpanded = new Set(expandedProperties);
+
+    if (newExpanded.has(propertyId)) {
+      // Collapse
+      newExpanded.delete(propertyId);
+      setExpandedProperties(newExpanded);
+    } else {
+      // Expand - load units if multi-unit and not already loaded
+      newExpanded.add(propertyId);
+      setExpandedProperties(newExpanded);
+
+      if (propertyType === 'multi_unit' && !propertyUnits[propertyId]) {
+        try {
+          const { data: units, error } = await supabase
+            .from('properties')
+            .select('*')
+            .eq('parent_property_id', propertyId)
+            .order('created_at', { ascending: true });
+
+          if (error) {
+            console.error('Error loading units:', error);
+          } else {
+            setPropertyUnits(prev => ({ ...prev, [propertyId]: units || [] }));
+          }
+        } catch (error) {
+          console.error('Error fetching units:', error);
+        }
+      }
+    }
+  };
+
   const loadProperties = async () => {
     try {
+      // Only load parent buildings and standalone properties (not individual units)
       const { data, error } = await supabase
         .from('properties')
         .select('*')
+        .is('parent_property_id', null) // Exclude child units
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -1225,65 +1262,124 @@ export default function PropertiesPage() {
 
         {/* Properties Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {properties.map((property) => (
-            <div key={property.id} className="bg-white rounded-lg shadow overflow-hidden">
-              {property.image && (
-                <img
-                  src={property.image}
-                  alt={property.title}
-                  className="w-full h-48 object-cover"
-                />
-              )}
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg text-gray-900">{property.title}</h3>
-                  <div className="flex gap-1">
-                    {property.featured && (
-                      <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                        Featured
+          {properties.map((property) => {
+            const isMultiUnit = property.property_type === 'multi_unit';
+            const isExpanded = expandedProperties.has(property.id);
+            const units = propertyUnits[property.id] || [];
+
+            return (
+              <div key={property.id} className="bg-white rounded-lg shadow overflow-hidden">
+                {property.image && (
+                  <img
+                    src={property.image}
+                    alt={property.title}
+                    className="w-full h-48 object-cover"
+                  />
+                )}
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-lg text-gray-900">{property.title}</h3>
+                    <div className="flex gap-1 flex-wrap justify-end">
+                      {isMultiUnit && (
+                        <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded whitespace-nowrap">
+                          {units.length > 0 ? `${units.length} Units` : 'Multi-Unit'}
+                        </span>
+                      )}
+                      {property.featured && (
+                        <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
+                          Featured
+                        </span>
+                      )}
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        property.available
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {property.available ? 'Available' : 'Unavailable'}
                       </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-1">
+                    <strong>Type:</strong> {property.type}
+                  </p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    <strong>Location:</strong> {property.location}
+                  </p>
+                  <p className="text-sm text-gray-600 mb-1">
+                    <strong>Size:</strong> {property.size}
+                  </p>
+                  <p className="text-sm text-gray-600 mb-3">
+                    <strong>Price:</strong> {property.price}
+                  </p>
+                  <p className="text-sm text-gray-700 mb-4 line-clamp-3">
+                    {property.description}
+                  </p>
+
+                  {/* Units Section for Multi-Unit Properties */}
+                  {isMultiUnit && isExpanded && (
+                    <div className="mb-4 border-t border-gray-200 pt-3">
+                      <h4 className="font-semibold text-sm text-gray-900 mb-2">Units:</h4>
+                      {units.length > 0 ? (
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                          {units.map((unit, index) => (
+                            <div key={unit.id} className="bg-gray-50 p-2 rounded text-xs">
+                              <div className="font-medium text-gray-900">{unit.title}</div>
+                              <div className="text-gray-600 mt-1">
+                                {unit.size} • {unit.price}
+                                {unit.available ?
+                                  <span className="ml-2 text-green-600">Available</span> :
+                                  <span className="ml-2 text-red-600">Unavailable</span>
+                                }
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">No units added yet</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    {isMultiUnit && (
+                      <button
+                        onClick={() => togglePropertyExpand(property.id, property.property_type || 'single')}
+                        className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm hover:bg-purple-200 flex items-center gap-1"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                            Hide
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                            View Units
+                          </>
+                        )}
+                      </button>
                     )}
-                    <span className={`text-xs px-2 py-1 rounded ${
-                      property.available
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {property.available ? 'Available' : 'Unavailable'}
-                    </span>
+                    <button
+                      onClick={() => handleEdit(property)}
+                      className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(property.id)}
+                      className="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-1">
-                  <strong>Type:</strong> {property.type}
-                </p>
-                <p className="text-sm text-gray-600 mb-1">
-                  <strong>Location:</strong> {property.location}
-                </p>
-                <p className="text-sm text-gray-600 mb-1">
-                  <strong>Size:</strong> {property.size}
-                </p>
-                <p className="text-sm text-gray-600 mb-3">
-                  <strong>Price:</strong> {property.price}
-                </p>
-                <p className="text-sm text-gray-700 mb-4 line-clamp-3">
-                  {property.description}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(property)}
-                    className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(property.id)}
-                    className="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
-                  >
-                    Delete
-                  </button>
-                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {properties.length === 0 && (
