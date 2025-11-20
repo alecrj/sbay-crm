@@ -83,10 +83,22 @@ export async function POST(request: NextRequest) {
         .eq('id', propertyId)
         .single();
 
+      console.log('🏢 Property lookup for booking:', {
+        propertyId,
+        hasParent: !!property?.parent_property_id,
+        parentId: property?.parent_property_id
+      });
+
       if (property && property.parent_property_id) {
         // This is a unit - use parent building for calendar, store unit separately
         calendarPropertyId = property.parent_property_id;
         unitId = propertyId;
+        console.log('✅ Unit detected - using parent building calendar:', {
+          unitId,
+          parentBuildingId: calendarPropertyId
+        });
+      } else {
+        console.log('📍 Standalone property - using its own calendar');
       }
 
       // Check availability using the calendar property (parent building for units, or the property itself)
@@ -214,6 +226,12 @@ export async function POST(request: NextRequest) {
     // Save appointment in database
     // For multi-unit buildings: property_id = parent building, unit_id = specific unit
     // For single properties: property_id = property, unit_id = null
+    console.log('💾 Saving appointment with:', {
+      property_id: calendarPropertyId,
+      unit_id: unitId,
+      start_time: appointmentData.start_time
+    });
+
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert([{
@@ -231,6 +249,8 @@ export async function POST(request: NextRequest) {
       }])
       .select()
       .single();
+
+    console.log('✅ Appointment saved:', appointment?.id);
 
     if (appointmentError) {
       console.error('Error saving appointment:', appointmentError);
