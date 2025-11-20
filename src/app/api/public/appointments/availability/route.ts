@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailableTimeSlots } from '@/lib/property-availability';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // CORS headers for cross-origin requests from the public website
 const corsHeaders = {
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     // If so, we need to use the parent building's calendar
     let calendarPropertyId = propertyId;
 
-    const { data: propertyData, error: propError } = await supabase
+    const { data: propertyData, error: propError } = await supabaseAdmin
       .from('properties')
       .select('id, title, parent_property_id')
       .eq('id', propertyId)
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify calendar exists for the property (or parent building)
-    const { data: property, error: propertyError } = await supabase
+    const { data: property, error: propertyError } = await supabaseAdmin
       .from('property_calendars')
       .select('id, property_title, is_active')
       .eq('property_id', calendarPropertyId)
