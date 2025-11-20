@@ -135,12 +135,42 @@ export async function POST(request: NextRequest) {
     const appointmentDateTime = new Date(localDate.getTime() + (utcOffset * 60 * 1000));
     const appointmentEndTime = new Date(appointmentDateTime.getTime() + 60 * 60 * 1000); // 1 hour duration
 
-    // Check for overlapping appointments to prevent double booking
+    // Determine property and unit IDs for multi-unit buildings
+    let calendarPropertyId = propertyId;
+    let unitId = null;
+
     if (propertyId) {
+      // Check if this is a unit in a multi-unit building
+      const { data: property } = await supabase
+        .from('properties')
+        .select('id, parent_property_id')
+        .eq('id', propertyId)
+        .single();
+
+      console.log('🏢 Property lookup for booking:', {
+        propertyId,
+        hasParent: !!property?.parent_property_id,
+        parentId: property?.parent_property_id
+      });
+
+      if (property && property.parent_property_id) {
+        // This is a unit - use parent building for calendar, store unit separately
+        calendarPropertyId = property.parent_property_id;
+        unitId = propertyId;
+        console.log('✅ Unit detected - using parent building calendar:', {
+          unitId,
+          parentBuildingId: calendarPropertyId
+        });
+      }
+    }
+
+    // Check for overlapping appointments to prevent double booking
+    // Use calendarPropertyId (parent building for units) to check conflicts
+    if (calendarPropertyId) {
       const { data: existingAppointments, error: checkError } = await supabase
         .from('appointments')
         .select('id, start_time, end_time')
-        .eq('property_id', propertyId)
+        .eq('property_id', calendarPropertyId)
         .not('status', 'eq', 'cancelled');
 
       if (checkError) {
@@ -171,12 +201,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.log('💾 Saving appointment with:', {
+      property_id: calendarPropertyId,
+      unit_id: unitId,
+      start_time: appointmentDateTime.toISOString()
+    });
+
     const appointmentData = {
       title: `Tour - ${first_name} ${last_name}`,
       start_time: appointmentDateTime.toISOString(),
       end_time: appointmentEndTime.toISOString(),
       lead_id: leadResult.id,
-      property_id: propertyId || null,
+      property_id: calendarPropertyId || null,
+      unit_id: unitId,
       status: 'scheduled',
       description: property_interest || ''
     };
