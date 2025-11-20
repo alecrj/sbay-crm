@@ -243,6 +243,12 @@ export async function getAvailableTimeSlots(
     const nextDay = new Date(appointmentDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
+    console.log('🔍 Checking for existing appointments:', {
+      calendarPropertyId,
+      date: appointmentDate.toISOString(),
+      dateRange: [appointmentDate.toISOString(), nextDay.toISOString()]
+    });
+
     const { data: existingAppointments } = await supabaseAdmin
       .from('appointments')
       .select('start_time, end_time')
@@ -250,6 +256,8 @@ export async function getAvailableTimeSlots(
       .gte('start_time', appointmentDate.toISOString())
       .lt('start_time', nextDay.toISOString())
       .not('status', 'eq', 'cancelled');
+
+    console.log('📅 Found existing appointments:', existingAppointments?.length || 0, existingAppointments);
 
     // Generate 30-minute intervals
     // Work in UTC since appointments are stored in UTC
@@ -266,7 +274,16 @@ export async function getAvailableTimeSlots(
       const hasConflict = existingAppointments?.some(apt => {
         const aptStart = new Date(apt.start_time);
         const aptEnd = new Date(apt.end_time);
-        return slotStart < aptEnd && slotEnd > aptStart;
+        const conflicts = slotStart < aptEnd && slotEnd > aptStart;
+        if (conflicts) {
+          console.log('⚠️ Slot conflict detected:', {
+            slotStart: slotStart.toISOString(),
+            slotEnd: slotEnd.toISOString(),
+            aptStart: aptStart.toISOString(),
+            aptEnd: aptEnd.toISOString()
+          });
+        }
+        return conflicts;
       });
 
       if (!hasConflict) {
