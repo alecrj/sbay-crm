@@ -61,12 +61,18 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('Property created successfully:', { propertyId: property.id, propertyType: propertyData.property_type })
+    console.log('Property created successfully:', { propertyId: property.id, propertyType: propertyData.property_type, parentPropertyId: propertyData.parent_property_id })
 
-    // Create calendar ONLY for single properties (standalone properties AND units)
-    // Do NOT create calendar for multi-unit buildings (they're just containers)
-    if (propertyData.property_type === 'single') {
-      console.log('Creating calendar for single property/unit:', property.id)
+    // Create calendar logic:
+    // - Standalone single properties: YES (property_type = 'single' AND parent_property_id IS NULL)
+    // - Multi-unit buildings: YES (property_type = 'multi_unit') - they have the shared calendar
+    // - Individual units: NO (property_type = 'single' AND parent_property_id IS NOT NULL) - they use parent's calendar
+    const shouldCreateCalendar =
+      (propertyData.property_type === 'single' && !propertyData.parent_property_id) || // Standalone property
+      (propertyData.property_type === 'multi_unit'); // Multi-unit building (shared calendar)
+
+    if (shouldCreateCalendar) {
+      console.log('Creating calendar for property:', property.id)
 
       const { error: calendarError } = await supabaseAdmin
         .from('property_calendars')
@@ -86,7 +92,7 @@ export async function POST(request: NextRequest) {
         console.log('Calendar created successfully for property:', property.id)
       }
     } else {
-      console.log('Skipping calendar creation for multi-unit building (not bookable):', property.id)
+      console.log('Skipping calendar creation for unit (uses parent building calendar):', property.id)
     }
 
     // Trigger website rebuild webhook
