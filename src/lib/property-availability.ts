@@ -19,6 +19,23 @@ export async function checkPropertyAvailability(
   endTime: Date
 ): Promise<PropertyAvailability> {
   try {
+    // First, check if this is a unit in a multi-unit building
+    // If so, use the parent building's calendar instead
+    const { data: property, error: propertyError } = await supabaseAdmin
+      .from('properties')
+      .select('id, parent_property_id')
+      .eq('id', propertyId)
+      .single();
+
+    if (propertyError) {
+      console.error('Error fetching property:', propertyError);
+      // If we can't find the property, default to allowing appointments
+      return { isAvailable: true };
+    }
+
+    // Use parent property ID for calendar if this is a unit
+    const calendarPropertyId = property.parent_property_id || propertyId;
+
     // Get day of week (0 = Sunday, 1 = Monday, etc.)
     const dayOfWeek = startTime.getDay();
 
@@ -26,7 +43,7 @@ export async function checkPropertyAvailability(
     const { data: calendar, error: calendarError } = await supabaseAdmin
       .from('property_calendars')
       .select('id, is_active')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .single();
 
     if (calendarError || !calendar) {
@@ -52,7 +69,7 @@ export async function checkPropertyAvailability(
     const { data: blockedDates, error: blockedError } = await supabaseAdmin
       .from('calendar_blocked_dates')
       .select('id')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .eq('blocked_date', appointmentDate);
 
     if (blockedError) {
@@ -72,7 +89,7 @@ export async function checkPropertyAvailability(
     const { data: availability, error: availabilityError } = await supabaseAdmin
       .from('calendar_availability')
       .select('start_time, end_time, is_active')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .eq('day_of_week', dayOfWeek)
       .single();
 
@@ -115,10 +132,11 @@ export async function checkPropertyAvailability(
     }
 
     // Check for existing appointments at this time
+    // Use calendarPropertyId to check against the building's shared calendar
     const { data: existingAppointments, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .select('id')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .gte('start_time', startTime.toISOString())
       .lt('end_time', endTime.toISOString())
       .not('status', 'eq', 'cancelled');
@@ -162,6 +180,22 @@ export async function getAvailableTimeSlots(
   duration: number = 30 // minutes
 ): Promise<TimeSlot[]> {
   try {
+    // First, check if this is a unit in a multi-unit building
+    // If so, use the parent building's calendar instead
+    const { data: property, error: propertyError } = await supabaseAdmin
+      .from('properties')
+      .select('id, parent_property_id')
+      .eq('id', propertyId)
+      .single();
+
+    if (propertyError) {
+      console.error('Error fetching property:', propertyError);
+      return [];
+    }
+
+    // Use parent property ID for calendar if this is a unit
+    const calendarPropertyId = property.parent_property_id || propertyId;
+
     const appointmentDate = new Date(date);
     const dayOfWeek = appointmentDate.getDay();
 
@@ -169,7 +203,7 @@ export async function getAvailableTimeSlots(
     const { data: calendarData, error: calendarError } = await supabaseAdmin
       .from('property_calendars')
       .select('id, is_active')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .single();
 
     if (calendarError || !calendarData || !calendarData.is_active) {
@@ -180,7 +214,7 @@ export async function getAvailableTimeSlots(
     const { data: availability, error: availabilityError } = await supabaseAdmin
       .from('calendar_availability')
       .select('start_time, end_time, is_active')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .eq('day_of_week', dayOfWeek)
       .single();
 
@@ -192,7 +226,7 @@ export async function getAvailableTimeSlots(
     const { data: blockedDates } = await supabaseAdmin
       .from('calendar_blocked_dates')
       .select('id')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .eq('blocked_date', date);
 
     if (blockedDates && blockedDates.length > 0) {
@@ -205,13 +239,14 @@ export async function getAvailableTimeSlots(
     const slots: TimeSlot[] = [];
 
     // Get existing appointments for this date
+    // Use calendarPropertyId to check against the building's shared calendar
     const nextDay = new Date(appointmentDate);
     nextDay.setDate(nextDay.getDate() + 1);
 
     const { data: existingAppointments } = await supabaseAdmin
       .from('appointments')
       .select('start_time, end_time')
-      .eq('property_id', propertyId)
+      .eq('property_id', calendarPropertyId)
       .gte('start_time', appointmentDate.toISOString())
       .lt('start_time', nextDay.toISOString())
       .not('status', 'eq', 'cancelled');

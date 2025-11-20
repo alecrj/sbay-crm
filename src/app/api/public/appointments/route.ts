@@ -71,10 +71,27 @@ export async function POST(request: NextRequest) {
     const duration = data.duration || 60; // minutes
     const endDateTime = new Date(appointmentDateTime.getTime() + duration * 60 * 1000);
 
-    // Check if time slot is available for the property
+    // Determine property and unit IDs for multi-unit buildings
+    let calendarPropertyId = propertyId;
+    let unitId = null;
+
     if (propertyId) {
+      // Check if this is a unit in a multi-unit building
+      const { data: property } = await supabase
+        .from('properties')
+        .select('id, parent_property_id')
+        .eq('id', propertyId)
+        .single();
+
+      if (property && property.parent_property_id) {
+        // This is a unit - use parent building for calendar, store unit separately
+        calendarPropertyId = property.parent_property_id;
+        unitId = propertyId;
+      }
+
+      // Check availability using the calendar property (parent building for units, or the property itself)
       const propertyAvailability = await checkPropertyAvailability(
-        propertyId,
+        propertyId, // Pass the original propertyId - the function will handle parent lookup
         appointmentDateTime,
         endDateTime
       );
@@ -195,11 +212,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Save appointment in database
+    // For multi-unit buildings: property_id = parent building, unit_id = specific unit
+    // For single properties: property_id = property, unit_id = null
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert([{
         lead_id: leadId,
-        property_id: propertyId || null,
+        property_id: calendarPropertyId || null,
+        unit_id: unitId,
         title: appointmentData.title,
         description: appointmentData.description,
         start_time: appointmentData.start_time,
@@ -228,13 +248,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Update lead with consultation information
+    // Store the specific unit (if multi-unit) or property they're interested in
     if (leadId) {
       await supabase
         .from('leads')
         .update({
           consultation_date: appointmentDate,
           consultation_time: appointmentTime,
-          property_id: propertyId || null,
+          property_id: unitId || calendarPropertyId || null, // Store the specific unit if available
           status: 'tour-scheduled', // Move to tour-scheduled since they booked an appointment
         })
         .eq('id', leadId);
