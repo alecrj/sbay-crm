@@ -90,6 +90,25 @@ export async function POST(request: NextRequest) {
         // Don't fail the whole request if calendar creation fails
       } else {
         console.log('Calendar created successfully for property:', property.id)
+
+        // Set default business hours: Monday-Friday 9am-5pm
+        const defaultHours = [1, 2, 3, 4, 5].map(day => ({
+          property_id: property.id,
+          day_of_week: day,
+          start_time: '09:00:00',
+          end_time: '17:00:00',
+          is_active: true
+        }));
+
+        const { error: availabilityError } = await supabaseAdmin
+          .from('calendar_availability')
+          .insert(defaultHours);
+
+        if (availabilityError) {
+          console.error('Error setting default business hours:', availabilityError);
+        } else {
+          console.log('Default business hours set (Mon-Fri 9am-5pm)');
+        }
       }
     } else {
       console.log('Skipping calendar creation for unit (uses parent building calendar):', property.id)
