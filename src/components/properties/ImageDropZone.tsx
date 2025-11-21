@@ -158,7 +158,8 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
                   <img
                     src={imageUrl}
                     alt={`Property image ${index + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover bg-white"
+                    style={{ minHeight: '96px', minWidth: '100%' }}
                     onError={(e) => {
                       console.error('Image failed to load:', imageUrl);
                       console.error('Error details:', e);
