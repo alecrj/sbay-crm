@@ -148,7 +148,7 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
             {galleryImages.map((imageUrl, index) => (
               <div key={index} className="relative group">
                 <div
-                  className={`relative w-full h-24 border-2 rounded-lg overflow-hidden bg-white dark:bg-gray-900 cursor-pointer transition-all ${
+                  className={`relative w-full h-24 border-2 rounded-lg overflow-hidden cursor-pointer transition-all ${
                     index === featuredImageIndex
                       ? "border-blue-500 ring-2 ring-blue-200 dark:ring-blue-800"
                       : "border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500"
@@ -158,8 +158,7 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
                   <img
                     src={imageUrl}
                     alt={`Property image ${index + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover z-10"
-                    style={{ minHeight: '96px', minWidth: '100%' }}
+                    className="w-full h-full object-cover"
                     onError={(e) => {
                       console.error('Image failed to load:', imageUrl);
                       console.error('Error details:', e);
@@ -177,13 +176,10 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
 
                   {/* Featured Badge */}
                   {index === featuredImageIndex && (
-                    <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded z-20">
+                    <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded z-10">
                       Featured
                     </div>
                   )}
-
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all pointer-events-none z-15" />
                 </div>
 
                 {/* Remove Button */}
@@ -193,7 +189,7 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
                     e.stopPropagation();
                     onRemoveImage(index);
                   }}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 focus:opacity-100 focus:outline-none"
+                  className="absolute -top-2 -right-2 z-20 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 focus:opacity-100 focus:outline-none"
                   title="Remove image"
                 >
                   ×
