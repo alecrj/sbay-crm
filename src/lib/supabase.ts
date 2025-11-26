@@ -24,7 +24,7 @@ export interface Property {
   property_type?: 'single' | 'multi_unit'
   parent_property_id?: string
   location: string
-  county?: 'Miami-Dade' | 'Broward' | 'Palm Beach' | 'St. Lucie'
+  county?: 'Miami-Dade' | 'Broward' | 'Palm Beach' | 'St. Lucie' | 'Okeechobee'
   price: string
   size: string
   available: boolean

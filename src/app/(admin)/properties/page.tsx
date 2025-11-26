@@ -32,6 +32,7 @@ export default function PropertiesPage() {
   const [loading, setLoading] = useState(true);
   const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set());
   const [propertyUnits, setPropertyUnits] = useState<Record<string, any[]>>({});
+  const [counties, setCounties] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -319,7 +320,48 @@ export default function PropertiesPage() {
 
   useEffect(() => {
     loadProperties();
+    loadCounties();
   }, []);
+
+  const loadCounties = async () => {
+    try {
+      console.log('🏛️ Loading counties from database...');
+      const { data, error } = await supabase
+        .from('counties')
+        .select('id, name')
+        .eq('active', true)
+        .order('name');
+
+      console.log('🏛️ Counties response:', { data, error });
+
+      if (error) {
+        console.error('❌ Error fetching counties:', error);
+        // Fallback to hardcoded list
+        const fallbackCounties = [
+          { id: '1', name: 'Broward' },
+          { id: '2', name: 'Miami-Dade' },
+          { id: '3', name: 'Palm Beach' },
+          { id: '4', name: 'St. Lucie' },
+        ];
+        console.log('🏛️ Using fallback counties:', fallbackCounties);
+        setCounties(fallbackCounties);
+      } else {
+        console.log('✅ Successfully loaded counties from DB:', data);
+        setCounties(data || []);
+      }
+    } catch (err) {
+      console.error('❌ Error loading counties:', err);
+      // Fallback to hardcoded list
+      const fallbackCounties = [
+        { id: '1', name: 'Broward' },
+        { id: '2', name: 'Miami-Dade' },
+        { id: '3', name: 'Palm Beach' },
+        { id: '4', name: 'St. Lucie' },
+      ];
+      console.log('🏛️ Using fallback counties:', fallbackCounties);
+      setCounties(fallbackCounties);
+    }
+  };
 
   const togglePropertyExpand = async (propertyId: string, propertyType: string) => {
     const newExpanded = new Set(expandedProperties);
@@ -862,10 +904,11 @@ export default function PropertiesPage() {
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select County</option>
-                          <option value="Broward">Broward</option>
-                          <option value="Miami-Dade">Miami-Dade</option>
-                          <option value="Palm Beach">Palm Beach</option>
-                          <option value="St. Lucie">St. Lucie</option>
+                          {counties.map((county) => (
+                            <option key={county.id} value={county.name}>
+                              {county.name}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>

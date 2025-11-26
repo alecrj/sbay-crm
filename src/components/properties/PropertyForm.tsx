@@ -47,13 +47,42 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
   const [counties, setCounties] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
-    // Use hardcoded counties list
-    setCounties([
-      { id: '1', name: 'Broward' },
-      { id: '2', name: 'Miami-Dade' },
-      { id: '3', name: 'Palm Beach' },
-      { id: '4', name: 'St. Lucie' },
-    ]);
+    // Fetch counties from database
+    const fetchCounties = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('counties')
+          .select('id, name')
+          .eq('active', true)
+          .order('name');
+
+        if (error) {
+          console.error('Error fetching counties:', error);
+          // Fallback to hardcoded list if database fetch fails
+          setCounties([
+            { id: '1', name: 'Broward' },
+            { id: '2', name: 'Miami-Dade' },
+            { id: '3', name: 'Okeechobee' },
+            { id: '4', name: 'Palm Beach' },
+            { id: '5', name: 'St. Lucie' },
+          ]);
+        } else {
+          setCounties(data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching counties:', err);
+        // Fallback to hardcoded list if fetch fails
+        setCounties([
+          { id: '1', name: 'Broward' },
+          { id: '2', name: 'Miami-Dade' },
+          { id: '3', name: 'Okeechobee' },
+          { id: '4', name: 'Palm Beach' },
+          { id: '5', name: 'St. Lucie' },
+        ]);
+      }
+    };
+
+    fetchCounties();
 
     if (property) {
       const galleryArray = Array.isArray(property.gallery) ? property.gallery : [];

@@ -73,6 +73,12 @@ const navItems: NavItem[] = [
     path: "/users",
     adminOnly: true,
   },
+  {
+    icon: <PlugInIcon />,
+    name: "Settings",
+    path: "/settings",
+    adminOnly: true,
+  },
 ];
 
 const othersItems: NavItem[] = [];
