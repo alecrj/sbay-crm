@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { createCalendarEvent } from '@/lib/google-calendar';
 import { scheduleAppointmentReminders } from '@/lib/notification-scheduler';
+import { NotificationService } from '@/lib/notifications';
 
 // CORS headers for cross-origin requests from the public website
 const corsHeaders = {
@@ -283,6 +284,91 @@ export async function POST(request: NextRequest) {
     } catch (reminderError) {
       console.error('Failed to schedule appointment reminders:', reminderError);
       // Don't fail the appointment creation for reminder errors
+    }
+
+    // Send immediate notification to admin about new appointment request
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'info@shallowbayadvisors.com';
+
+      // Get property name if a property was selected
+      let propertyName = 'Not specified';
+      const propertyIdToLookup = unitId || calendarPropertyId;
+      if (propertyIdToLookup) {
+        const { data: propertyData } = await supabase
+          .from('properties')
+          .select('name, address')
+          .eq('id', propertyIdToLookup)
+          .single();
+        if (propertyData) {
+          propertyName = propertyData.name || propertyData.address || 'Property';
+        }
+      }
+
+      const appointmentDateFormatted = appointmentDateTime.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      const appointmentTimeFormatted = appointmentDateTime.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      });
+
+      const subject = `🗓️ New Tour Request: ${name} - ${appointmentDateFormatted}`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #3B82F6, #1E40AF); color: white; padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+            <h1 style="margin: 0;">🗓️ New Tour Request</h1>
+          </div>
+          <div style="background: #fff; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="background: #F8FAFC; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h2 style="margin-top: 0; color: #1F2937;">Contact Information</h2>
+              <p><strong>👤 Name:</strong> ${name}</p>
+              <p><strong>📧 Email:</strong> <a href="mailto:${email}">${email}</a></p>
+              ${data.phone ? `<p><strong>📱 Phone:</strong> <a href="tel:${data.phone}">${data.phone}</a></p>` : ''}
+              ${data.company ? `<p><strong>🏢 Company:</strong> ${data.company}</p>` : ''}
+            </div>
+            <div style="background: #EFF6FF; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3B82F6;">
+              <h2 style="margin-top: 0; color: #1E40AF;">Requested Appointment</h2>
+              <p><strong>📅 Date:</strong> ${appointmentDateFormatted}</p>
+              <p><strong>🕐 Time:</strong> ${appointmentTimeFormatted}</p>
+              <p><strong>🏠 Property:</strong> ${propertyName}</p>
+              ${data.message ? `<p><strong>💬 Message:</strong> ${data.message}</p>` : ''}
+            </div>
+            <p style="color: #6B7280; font-size: 14px; margin-top: 20px;">
+              This is a tour request. Please reach out to the client to confirm the appointment time.
+            </p>
+            <div style="text-align: center; margin-top: 20px;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sbaycrm.netlify.app'}/appointments"
+                 style="background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500; display: inline-block;">
+                View in CRM →
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+      const text = `New Tour Request
+
+Contact Information:
+- Name: ${name}
+- Email: ${email}
+${data.phone ? `- Phone: ${data.phone}\n` : ''}${data.company ? `- Company: ${data.company}\n` : ''}
+Requested Appointment:
+- Date: ${appointmentDateFormatted}
+- Time: ${appointmentTimeFormatted}
+- Property: ${propertyName}
+${data.message ? `- Message: ${data.message}\n` : ''}
+This is a tour request. Please reach out to the client to confirm the appointment time.
+
+View in CRM: ${process.env.NEXT_PUBLIC_APP_URL || 'https://sbaycrm.netlify.app'}/appointments`;
+
+      await NotificationService.sendEmail(adminEmail, subject, html, text);
+      console.log(`✉️ Sent immediate appointment notification to ${adminEmail}`);
+    } catch (notificationError) {
+      console.error('Failed to send immediate appointment notification:', notificationError);
+      // Don't fail the appointment creation for notification errors
     }
 
     return NextResponse.json(
