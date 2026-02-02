@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { createCalendarEvent } from '@/lib/google-calendar';
 import { scheduleAppointmentReminders } from '@/lib/notification-scheduler';
-import { isTimeSlotAvailable } from '@/lib/google-calendar';
-import { checkPropertyAvailability } from '@/lib/property-availability';
 
 // CORS headers for cross-origin requests from the public website
 const corsHeaders = {
@@ -101,28 +99,8 @@ export async function POST(request: NextRequest) {
         console.log('📍 Standalone property - using its own calendar');
       }
 
-      // Check availability using the calendar property (parent building for units, or the property itself)
-      const propertyAvailability = await checkPropertyAvailability(
-        propertyId, // Pass the original propertyId - the function will handle parent lookup
-        appointmentDateTime,
-        endDateTime
-      );
-
-      if (!propertyAvailability.isAvailable) {
-        return NextResponse.json(
-          { error: propertyAvailability.reason || 'The selected time slot is not available. Please choose a different time.' },
-          { status: 409, headers: corsHeaders }
-        );
-      }
-    } else {
-      // Fallback to Google Calendar check for backward compatibility
-      const isAvailable = await isTimeSlotAvailable(appointmentDateTime, endDateTime);
-      if (!isAvailable) {
-        return NextResponse.json(
-          { error: 'The selected time slot is not available. Please choose a different time.' },
-          { status: 409, headers: corsHeaders }
-        );
-      }
+      // NOTE: Availability checking has been removed - all time slots are now bookable.
+      // Appointments are treated as requests that will be confirmed by the team.
     }
 
     // Extract appointment data
