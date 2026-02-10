@@ -377,15 +377,14 @@ export default function PropertiesPage() {
 
       if (propertyType === 'multi_unit' && !propertyUnits[propertyId]) {
         try {
-          const { data: units, error } = await supabase
-            .from('properties')
-            .select('*')
-            .eq('parent_property_id', propertyId)
-            .order('created_at', { ascending: true });
+          // Use API endpoint which uses service role
+          const response = await fetch('/api/properties');
+          const result = await response.json();
 
-          if (error) {
-            console.error('Error loading units:', error);
-          } else {
+          if (response.ok && result.properties) {
+            const units = result.properties.filter(
+              (p: any) => p.parent_property_id === propertyId
+            );
             setPropertyUnits(prev => ({ ...prev, [propertyId]: units || [] }));
           }
         } catch (error) {
@@ -414,14 +413,14 @@ export default function PropertiesPage() {
 
       console.log('✅ Unit deleted successfully via API');
 
-      // Refresh the units for this property
-      const { data: updatedUnits, error } = await supabase
-        .from('properties')
-        .select('*')
-        .eq('parent_property_id', parentPropertyId)
-        .order('created_at', { ascending: true });
+      // Refresh the units for this property via API
+      const response = await fetch('/api/properties');
+      const result = await response.json();
 
-      if (!error) {
+      if (response.ok && result.properties) {
+        const updatedUnits = result.properties.filter(
+          (p: any) => p.parent_property_id === parentPropertyId
+        );
         setPropertyUnits(prev => ({ ...prev, [parentPropertyId]: updatedUnits || [] }));
       }
     } catch (error) {
@@ -432,33 +431,21 @@ export default function PropertiesPage() {
 
   const loadProperties = async () => {
     try {
-      // Only load parent buildings and standalone properties (not individual units)
-      const { data, error } = await supabase
-        .from('properties')
-        .select('*')
-        .is('parent_property_id', null) // Exclude child units
-        .order('created_at', { ascending: false });
+      // Use API endpoint which uses service role (no token expiration issues)
+      const response = await fetch('/api/properties');
+      const result = await response.json();
 
-      if (error) {
-        console.error('Supabase error loading properties:', error);
-        console.error('Error details:', {
-          message: error.message,
-          hint: error.hint,
-          details: error.details,
-          code: error.code
-        });
-
-        // If table doesn't exist, show empty state
-        if (error.code === '42P01') {
-          console.log('Properties table does not exist yet. Please run the CREATE_PROPERTIES_TABLE.sql script.');
-          setProperties([]);
-          return;
-        }
-
-        throw error;
+      if (!response.ok) {
+        console.error('API error loading properties:', result.error);
+        throw new Error(result.error);
       }
 
-      setProperties(data || []);
+      // Filter to only show parent buildings and standalone properties (not individual units)
+      const parentProperties = (result.properties || []).filter(
+        (p: any) => !p.parent_property_id
+      );
+
+      setProperties(parentProperties);
     } catch (error) {
       console.error('Error loading properties:', error);
       // Set empty array on any error to prevent UI crashes
@@ -682,15 +669,15 @@ export default function PropertiesPage() {
     if (property.property_type === 'multi_unit') {
       console.log('📦 Loading existing units for property:', property.id);
       try {
-        const { data: existingUnits, error } = await supabase
-          .from('properties')
-          .select('*')
-          .eq('parent_property_id', property.id)
-          .order('created_at', { ascending: true });
+        // Use API endpoint which uses service role
+        const response = await fetch('/api/properties');
+        const result = await response.json();
 
-        if (error) {
-          console.error('Error loading units:', error);
-        } else if (existingUnits && existingUnits.length > 0) {
+        const existingUnits = response.ok && result.properties
+          ? result.properties.filter((p: any) => p.parent_property_id === property.id)
+          : [];
+
+        if (existingUnits && existingUnits.length > 0) {
           console.log(`✅ Loaded ${existingUnits.length} existing units`);
 
           // Convert existing units to the format expected by the form
