@@ -541,10 +541,56 @@ export default function PropertiesPage() {
 
         console.log('✅ Property updated successfully via API');
 
-        // If this is a multi-unit property, create any NEW units (ones without an id)
+        // If this is a multi-unit property, handle units
         if (formData.property_type === 'multi_unit' && units.length > 0) {
-          const newUnits = units.filter(unit => !unit.id); // Only units without an id are new
+          const newUnits = units.filter(unit => !unit.id); // Units without an id are new
+          const existingUnits = units.filter(unit => unit.id); // Units with an id need updating
 
+          // Update existing units (this was missing - caused images not to save!)
+          if (existingUnits.length > 0) {
+            console.log(`✏️ Updating ${existingUnits.length} existing units...`);
+
+            for (const unit of existingUnits) {
+              console.log(`📸 Updating unit "${unit.title}" images:`, {
+                image: unit.image,
+                galleryCount: unit.gallery?.length || 0,
+                gallery: unit.gallery
+              });
+
+              const unitData = {
+                title: `${formData.title} - ${unit.title}`,
+                type: formData.type,
+                street_address: formData.street_address,
+                city: formData.city,
+                county: formData.county,
+                zip_code: formData.zip_code,
+                location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
+                size: `${unit.size} sq ft`,
+                price: `$${unit.price}/month`,
+                description: unit.description,
+                available: unit.available,
+                features: unit.features,
+                image: unit.image,
+                gallery: unit.gallery
+              };
+
+              const unitResponse = await fetch(`/api/properties?id=${unit.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(unitData)
+              });
+
+              if (!unitResponse.ok) {
+                console.error(`Failed to update unit: ${unit.title}`);
+              } else {
+                console.log(`✅ Unit updated: ${unit.title}`);
+              }
+            }
+          }
+
+          // Create new units
           if (newUnits.length > 0) {
             console.log(`➕ Creating ${newUnits.length} new units...`);
 
