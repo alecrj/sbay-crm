@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     try {
       console.log('Sending confirmation email to:', email);
 
-      await resend.emails.send({
+      const confirmEmailResult = await resend.emails.send({
         from: 'Shallow Bay Advisors <onboarding@resend.dev>',
         to: [email],
         subject: 'Tour Request Received - Shallow Bay Advisors',
@@ -217,9 +217,14 @@ export async function POST(request: NextRequest) {
           </div>
         `
       });
-      console.log('Lead confirmation email sent successfully');
-    } catch (emailError) {
-      console.error('Error sending lead confirmation email:', emailError);
+      console.log('Lead confirmation email result:', JSON.stringify(confirmEmailResult, null, 2));
+      if (confirmEmailResult.error) {
+        console.error('Confirmation email error:', confirmEmailResult.error);
+      } else {
+        console.log('Lead confirmation email sent successfully, ID:', confirmEmailResult.data?.id);
+      }
+    } catch (emailError: any) {
+      console.error('Error sending lead confirmation email:', emailError?.message || emailError);
     }
 
     // Send notification email to admin
@@ -228,7 +233,7 @@ export async function POST(request: NextRequest) {
       const adminEmail = process.env.ADMIN_EMAIL || '99alecrodriguez@gmail.com';
       console.log('Sending admin notification to:', adminEmail);
 
-      await resend.emails.send({
+      const adminEmailResult = await resend.emails.send({
         from: 'Shallow Bay Advisors <onboarding@resend.dev>',
         to: [adminEmail],
         subject: `New Tour Request - ${first_name} ${last_name}`,
@@ -306,9 +311,15 @@ export async function POST(request: NextRequest) {
           </div>
         `
       });
-      console.log('Admin notification email sent successfully');
-    } catch (emailError) {
-      console.error('Error sending admin notification email:', emailError);
+      console.log('Admin notification email result:', JSON.stringify(adminEmailResult, null, 2));
+      if (adminEmailResult.error) {
+        console.error('Admin email error:', adminEmailResult.error);
+      } else {
+        console.log('Admin notification email sent successfully, ID:', adminEmailResult.data?.id);
+      }
+    } catch (emailError: any) {
+      console.error('Error sending admin notification email:', emailError?.message || emailError);
+      console.error('Full error:', JSON.stringify(emailError, null, 2));
     }
 
     // Log activity
