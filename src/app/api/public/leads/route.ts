@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       preferred_time,
       message,
       source = 'website',
-      type = 'tour_request',
+      type = 'consultation',
       status = 'new',
       // Legacy fields for backwards compatibility
       appointmentDate,
