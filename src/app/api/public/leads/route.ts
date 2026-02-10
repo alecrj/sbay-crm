@@ -82,7 +82,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Build message with time preference included
+    let fullMessage = '';
+    if (finalPreferredTime) {
+      fullMessage = `Preferred time: ${finalPreferredTime}`;
+    }
+    if (message) {
+      fullMessage = fullMessage ? `${fullMessage}\n\n${message}` : message;
+    }
+
     // Create the lead data
+    // Note: consultation_time is a TIME type column, so we store the time preference in message instead
     const leadData = {
       title: `Tour Request - ${first_name} ${last_name}`,
       name: `${first_name} ${last_name}`,
@@ -95,8 +105,7 @@ export async function POST(request: NextRequest) {
       type,
       priority: 'medium',
       consultation_date: finalPreferredDate,
-      consultation_time: finalPreferredTime,
-      message: message || null,
+      message: fullMessage || null,
     };
 
     console.log('Creating lead:', JSON.stringify(leadData, null, 2));
