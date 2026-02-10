@@ -772,10 +772,10 @@ export default function PropertiesPage() {
 
   if (loading || roleLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -786,16 +786,16 @@ export default function PropertiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 🏢 Property Management
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 dark:text-gray-400">
                 Manage properties that appear on your website
               </p>
             </div>
@@ -1346,7 +1346,7 @@ export default function PropertiesPage() {
             const units = propertyUnits[property.id] || [];
 
             return (
-              <div key={property.id} className="bg-white rounded-lg shadow overflow-hidden">
+              <div key={property.id} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
                 {property.image && (
                   <img
                     src={property.image}
@@ -1356,7 +1356,7 @@ export default function PropertiesPage() {
                 )}
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-lg text-gray-900">{property.title}</h3>
+                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{property.title}</h3>
                     <div className="flex gap-1 flex-wrap justify-end">
                       {isMultiUnit && (
                         <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded whitespace-nowrap">
@@ -1377,38 +1377,38 @@ export default function PropertiesPage() {
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     <strong>Type:</strong> {property.type}
                   </p>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     <strong>Location:</strong> {property.location}
                   </p>
-                  <p className="text-sm text-gray-600 mb-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                     <strong>Size:</strong> {property.size}
                   </p>
-                  <p className="text-sm text-gray-600 mb-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                     <strong>Price:</strong> {property.price}
                   </p>
-                  <p className="text-sm text-gray-700 mb-4 line-clamp-3">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-4 line-clamp-3">
                     {property.description}
                   </p>
 
                   {/* Units Section for Multi-Unit Properties */}
                   {isMultiUnit && isExpanded && (
-                    <div className="mb-4 border-t border-gray-200 pt-3">
-                      <h4 className="font-semibold text-sm text-gray-900 mb-2">Units:</h4>
+                    <div className="mb-4 border-t border-gray-200 dark:border-gray-700 pt-3">
+                      <h4 className="font-semibold text-sm text-gray-900 dark:text-white mb-2">Units:</h4>
                       {units.length > 0 ? (
                         <div className="space-y-2 max-h-60 overflow-y-auto">
                           {units.map((unit, index) => (
-                            <div key={unit.id} className="bg-gray-50 p-2 rounded text-xs">
+                            <div key={unit.id} className="bg-gray-50 dark:bg-gray-700 p-2 rounded text-xs">
                               <div className="flex justify-between items-start">
                                 <div className="flex-1">
-                                  <div className="font-medium text-gray-900">{unit.title}</div>
-                                  <div className="text-gray-600 mt-1">
+                                  <div className="font-medium text-gray-900 dark:text-white">{unit.title}</div>
+                                  <div className="text-gray-600 dark:text-gray-400 mt-1">
                                     {unit.size} • {unit.price}
                                     {unit.available ?
-                                      <span className="ml-2 text-green-600">Available</span> :
-                                      <span className="ml-2 text-red-600">Unavailable</span>
+                                      <span className="ml-2 text-green-600 dark:text-green-400">Available</span> :
+                                      <span className="ml-2 text-red-600 dark:text-red-400">Unavailable</span>
                                     }
                                   </div>
                                 </div>
@@ -1430,7 +1430,7 @@ export default function PropertiesPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-500">No units added yet</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">No units added yet</p>
                       )}
                     </div>
                   )}
@@ -1439,7 +1439,7 @@ export default function PropertiesPage() {
                     {isMultiUnit && (
                       <button
                         onClick={() => togglePropertyExpand(property.id, property.property_type || 'single')}
-                        className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm hover:bg-purple-200 flex items-center gap-1"
+                        className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-3 py-1 rounded text-sm hover:bg-purple-200 dark:hover:bg-purple-900/50 flex items-center gap-1"
                       >
                         {isExpanded ? (
                           <>
@@ -1460,13 +1460,13 @@ export default function PropertiesPage() {
                     )}
                     <button
                       onClick={() => handleEdit(property)}
-                      className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
+                      className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(property.id)}
-                      className="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
+                      className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-3 py-1 rounded text-sm hover:bg-red-200 dark:hover:bg-red-900/50"
                     >
                       Delete
                     </button>
@@ -1478,14 +1478,14 @@ export default function PropertiesPage() {
         </div>
 
         {properties.length === 0 && (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="text-gray-400 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+            <div className="text-gray-400 dark:text-gray-500 mb-4">
               <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-5 0H9m0 0H5m5 0v-4a1 1 0 011-1h2a1 1 0 011 1v4M7 7h10M7 11h10" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No properties yet</h3>
-            <p className="text-gray-600 mb-6">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No properties yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Add your first property to get started. Properties you add here will appear on your website.
             </p>
             <button
