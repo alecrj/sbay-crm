@@ -258,16 +258,24 @@ export default function ManageUnitsPage() {
     if (!confirm('Are you sure you want to delete this unit?')) return;
 
     try {
-      const { error } = await supabase
-        .from('properties')
-        .delete()
-        .eq('id', unitId);
+      console.log('🗑️ Deleting unit via API...');
 
-      if (error) throw error;
+      const response = await fetch(`/api/properties?id=${unitId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+      console.log('🔥 Delete unit API response:', { status: response.status, result });
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete unit');
+      }
+
+      console.log('✅ Unit deleted successfully via API');
       await loadData();
     } catch (error) {
       console.error('Error deleting unit:', error);
-      alert('Failed to delete unit');
+      alert(`Failed to delete unit: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

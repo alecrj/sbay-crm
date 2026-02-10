@@ -395,6 +395,41 @@ export default function PropertiesPage() {
     }
   };
 
+  const handleDeleteUnit = async (unitId: string, parentPropertyId: string) => {
+    if (!confirm('Are you sure you want to delete this unit?')) return;
+
+    try {
+      console.log('🗑️ Deleting unit via API...');
+
+      const response = await fetch(`/api/properties?id=${unitId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+      console.log('🔥 Delete unit API response:', { status: response.status, result });
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete unit');
+      }
+
+      console.log('✅ Unit deleted successfully via API');
+
+      // Refresh the units for this property
+      const { data: updatedUnits, error } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('parent_property_id', parentPropertyId)
+        .order('created_at', { ascending: true });
+
+      if (!error) {
+        setPropertyUnits(prev => ({ ...prev, [parentPropertyId]: updatedUnits || [] }));
+      }
+    } catch (error) {
+      console.error('Error deleting unit:', error);
+      alert(`Failed to delete unit: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   const loadProperties = async () => {
     try {
       // Only load parent buildings and standalone properties (not individual units)
@@ -1366,13 +1401,29 @@ export default function PropertiesPage() {
                         <div className="space-y-2 max-h-60 overflow-y-auto">
                           {units.map((unit, index) => (
                             <div key={unit.id} className="bg-gray-50 p-2 rounded text-xs">
-                              <div className="font-medium text-gray-900">{unit.title}</div>
-                              <div className="text-gray-600 mt-1">
-                                {unit.size} • {unit.price}
-                                {unit.available ?
-                                  <span className="ml-2 text-green-600">Available</span> :
-                                  <span className="ml-2 text-red-600">Unavailable</span>
-                                }
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="font-medium text-gray-900">{unit.title}</div>
+                                  <div className="text-gray-600 mt-1">
+                                    {unit.size} • {unit.price}
+                                    {unit.available ?
+                                      <span className="ml-2 text-green-600">Available</span> :
+                                      <span className="ml-2 text-red-600">Unavailable</span>
+                                    }
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteUnit(unit.id, property.id);
+                                  }}
+                                  className="ml-2 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete unit"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
                               </div>
                             </div>
                           ))}
