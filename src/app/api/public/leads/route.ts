@@ -90,7 +90,6 @@ export async function POST(request: NextRequest) {
       phone: phone || null,
       company: company || null,
       property_interest: property_interest || null,
-      property_id: propertyId || null,
       source,
       status,
       type,
