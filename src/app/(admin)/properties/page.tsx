@@ -414,11 +414,11 @@ export default function PropertiesPage() {
       console.log('✅ Unit deleted successfully via API');
 
       // Refresh the units for this property via API
-      const response = await fetch('/api/properties');
-      const result = await response.json();
+      const refreshResponse = await fetch('/api/properties');
+      const refreshResult = await refreshResponse.json();
 
-      if (response.ok && result.properties) {
-        const updatedUnits = result.properties.filter(
+      if (refreshResponse.ok && refreshResult.properties) {
+        const updatedUnits = refreshResult.properties.filter(
           (p: any) => p.parent_property_id === parentPropertyId
         );
         setPropertyUnits(prev => ({ ...prev, [parentPropertyId]: updatedUnits || [] }));
