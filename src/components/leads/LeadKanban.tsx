@@ -11,9 +11,9 @@ import LeadForm from "./LeadForm";
 import LeadCard from "./LeadCard";
 
 const LEAD_STATUSES = [
-  { id: "new", title: "Lead Form", color: "bg-blue-500" },
-  { id: "tour-scheduled", title: "Tour Scheduled", color: "bg-purple-500" },
-  { id: "canceled-no-show", title: "Canceled/No Show", color: "bg-orange-500" },
+  { id: "new", title: "New Lead", color: "bg-blue-500" },
+  { id: "contacted", title: "Contacted", color: "bg-purple-500" },
+  { id: "no-reply", title: "No Reply", color: "bg-orange-500" },
   { id: "showing-completed", title: "Showing Completed", color: "bg-yellow-500" },
   { id: "won", title: "Won", color: "bg-green-500" },
   { id: "lost", title: "Lost", color: "bg-red-500" },

@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
             if (value) {
               // Handle status field - validate it matches allowed values
               if (field === 'status') {
-                const allowedStatuses = ['new', 'tour-scheduled', 'canceled-no-show', 'showing-completed', 'won', 'lost'];
+                const allowedStatuses = ['new', 'contacted', 'no-reply', 'showing-completed', 'won', 'lost'];
                 const normalizedStatus = value.toLowerCase().replace(/\s+/g, '-');
                 if (allowedStatuses.includes(normalizedStatus)) {
                   leadData[field] = normalizedStatus;

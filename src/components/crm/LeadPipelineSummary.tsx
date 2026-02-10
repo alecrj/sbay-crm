@@ -35,9 +35,9 @@ const LeadPipelineSummary: React.FC = () => {
 
       // Define pipeline stages based on the LEAD_STATUSES from LeadKanban
       const stages = [
-        { id: 'new', title: 'Lead Form', color: 'bg-blue-500' },
-        { id: 'tour-scheduled', title: 'Tour Scheduled', color: 'bg-purple-500' },
-        { id: 'canceled-no-show', title: 'Canceled/No Show', color: 'bg-orange-500' },
+        { id: 'new', title: 'New Lead', color: 'bg-blue-500' },
+        { id: 'contacted', title: 'Contacted', color: 'bg-purple-500' },
+        { id: 'no-reply', title: 'No Reply', color: 'bg-orange-500' },
         { id: 'showing-completed', title: 'Showing Completed', color: 'bg-yellow-500' },
         { id: 'won', title: 'Won', color: 'bg-green-500' },
         { id: 'lost', title: 'Lost', color: 'bg-red-500' },
@@ -157,9 +157,9 @@ const LeadPipelineSummary: React.FC = () => {
                 </div>
                 <div className="text-center">
                   <div className="text-base sm:text-lg font-semibold text-purple-600">
-                    {pipelineData.find(stage => stage.status === 'Tour Scheduled')?.count || 0}
+                    {pipelineData.find(stage => stage.status === 'Contacted')?.count || 0}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">Tours Scheduled</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Contacted</div>
                 </div>
               </div>
             </div>
