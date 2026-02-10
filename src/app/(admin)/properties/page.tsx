@@ -479,6 +479,14 @@ export default function PropertiesPage() {
         gallery: filteredGallery
       });
 
+      // Debug: Show what we're about to save
+      if (filteredGallery.length > 0) {
+        console.log('🔍 DEBUG - About to save:', {
+          featuredImage,
+          galleryUrls: filteredGallery
+        });
+      }
+
       // Format the data properly for storage
       const propertyData = {
         ...formData,
@@ -491,6 +499,7 @@ export default function PropertiesPage() {
 
       if (editingProperty) {
         console.log('✏️ Updating property via API...');
+        console.log('📤 Sending to API:', JSON.stringify({ image: propertyData.image, gallery: propertyData.gallery }, null, 2));
 
         const response = await fetch(`/api/properties?id=${editingProperty.id}`, {
           method: 'PUT',
@@ -502,9 +511,30 @@ export default function PropertiesPage() {
 
         const result = await response.json();
         console.log('🔥 Update API response:', { status: response.status, result });
+        console.log('📥 Saved property image:', result.property?.image);
+        console.log('📥 Saved property gallery:', result.property?.gallery);
 
         if (!response.ok) {
           throw new Error(result.error || 'Failed to update property');
+        }
+
+        // Debug: Show what was saved vs what we sent
+        const sentImage = propertyData.image;
+        const savedImage = result.property?.image;
+        const sentGalleryCount = propertyData.gallery?.length || 0;
+        const savedGalleryCount = result.property?.gallery?.length || 0;
+
+        console.log('🔍 SAVE COMPARISON:', {
+          sentImage,
+          savedImage,
+          imageMatch: sentImage === savedImage,
+          sentGalleryCount,
+          savedGalleryCount
+        });
+
+        if (sentImage && !savedImage) {
+          console.error('❌ IMAGE WAS NOT SAVED! Sent:', sentImage, 'Got back:', savedImage);
+          alert(`Debug: Image was sent but not saved!\nSent: ${sentImage}\nReturned: ${savedImage || 'empty'}`);
         }
 
         console.log('✅ Property updated successfully via API');

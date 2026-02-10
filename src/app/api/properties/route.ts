@@ -150,16 +150,36 @@ export async function PUT(request: NextRequest) {
     }
 
     const propertyData = await request.json()
+
+    console.log('📥 PUT /api/properties received:', {
+      id,
+      image: propertyData.image,
+      gallery: propertyData.gallery,
+      galleryLength: Array.isArray(propertyData.gallery) ? propertyData.gallery.length : 'not array'
+    })
+
     const updateData = {
       ...propertyData,
       updated_at: new Date().toISOString()
     }
+
+    console.log('💾 Updating with:', {
+      image: updateData.image,
+      gallery: updateData.gallery
+    })
 
     const { data, error } = await supabaseAdmin
       .from('properties')
       .update(updateData)
       .eq('id', id)
       .select()
+
+    console.log('✅ Update result:', {
+      success: !error,
+      savedImage: data?.[0]?.image,
+      savedGallery: data?.[0]?.gallery,
+      error: error?.message
+    })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
