@@ -1,12 +1,11 @@
 import imageCompression from 'browser-image-compression';
-import { supabaseAdmin } from './supabase';
 
 /**
  * Universal image upload utility with automatic optimization
  *
  * This function handles all property image uploads consistently:
  * 1. Compresses/optimizes images for web display
- * 2. Uploads to Supabase Storage
+ * 2. Uploads to server API (which uses Supabase Storage with service role)
  * 3. Returns public URLs
  *
  * @param files - Array of File objects to upload
@@ -42,30 +41,22 @@ export async function uploadPropertyImages(files: File[]): Promise<string[]> {
 
       console.log(`Compressed to ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
 
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `properties/${fileName}`;
+      // Upload via API route (uses service role, no token expiration issues)
+      const formData = new FormData();
+      formData.append('file', compressedFile, file.name);
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from('property-images')
-        .upload(filePath, compressedFile, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to upload ${file.name}`);
       }
 
-      // Get public URL
-      const { data: urlData } = supabaseAdmin.storage
-        .from('property-images')
-        .getPublicUrl(filePath);
-
-      uploadedUrls.push(urlData.publicUrl);
+      uploadedUrls.push(result.url);
 
       console.log(`Successfully uploaded: ${file.name}`);
     } catch (error: any) {
