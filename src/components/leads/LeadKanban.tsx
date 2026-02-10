@@ -146,10 +146,10 @@ const LeadKanban: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              Lead Pipeline
+              Pipeline
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {isAdmin ? "Track and manage your sales leads through the pipeline" : "View sales leads and their current status"}
+              {isAdmin ? "Track and manage your leads through the sales pipeline" : "View leads and their current status"}
             </p>
           </div>
           {isAdmin && (

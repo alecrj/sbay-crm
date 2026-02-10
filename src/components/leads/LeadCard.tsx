@@ -2,7 +2,6 @@
 
 import React from "react";
 import { Lead } from "@/lib/supabase";
-import LeadAppointments from "./LeadAppointments";
 
 interface LeadCardProps {
   lead: Lead & {
@@ -291,10 +290,6 @@ const LeadCard: React.FC<LeadCardProps> = ({ lead, onEdit, onDelete, isAdmin = t
           </div>
         )}
 
-        {/* Appointments */}
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <LeadAppointments leadId={lead.id} showReminderButtons={isAdmin} />
-        </div>
       </div>
     </div>
   );

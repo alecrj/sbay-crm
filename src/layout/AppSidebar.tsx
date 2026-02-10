@@ -37,8 +37,8 @@ const navItems: NavItem[] = [
     path: "/",
   },
   {
-    icon: <GroupIcon />,
-    name: "Leads",
+    icon: <GridIcon />,
+    name: "Pipeline",
     path: "/leads",
   },
   {
@@ -47,10 +47,9 @@ const navItems: NavItem[] = [
     path: "/properties",
   },
   {
-    icon: <BoxIcon />,
-    name: "Property Leads",
+    icon: <GroupIcon />,
+    name: "Leads",
     path: "/property-leads",
-    adminOnly: true,
   },
   {
     icon: <PlugInIcon />,
