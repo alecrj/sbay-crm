@@ -464,6 +464,8 @@ export default function PropertiesPage() {
     console.log('🚀 Form submission started');
     console.log('📝 Form data:', formData);
     console.log('✏️ Editing property:', editingProperty);
+    console.log('🖼️ Gallery images state:', galleryImages);
+    console.log('⭐ Featured image index:', featuredImageIndex);
 
     try {
       // Get filtered gallery
