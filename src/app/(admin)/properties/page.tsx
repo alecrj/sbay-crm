@@ -274,14 +274,17 @@ export default function PropertiesPage() {
       const newGallery = [...galleryImages, ...uploadedUrls];
       console.log('📝 Updating gallery state:', newGallery);
       setGalleryImages(newGallery);
-      setFormData(prev => ({ ...prev, gallery: newGallery }));
 
-      // Set first uploaded image as featured if no featured image exists
-      if (galleryImages.length === 0 && uploadedUrls.length > 0) {
-        console.log('⭐ Setting featured image:', uploadedUrls[0]);
-        setFormData(prev => ({ ...prev, image: uploadedUrls[0] }));
-        setFeaturedImageIndex(0);
-      }
+      // Set gallery and featured image in one update to avoid race conditions
+      setFormData(prev => {
+        const needsFeaturedImage = !prev.image || prev.image.trim() === '';
+        if (needsFeaturedImage && uploadedUrls.length > 0) {
+          console.log('⭐ Setting featured image:', uploadedUrls[0]);
+          setFeaturedImageIndex(0);
+          return { ...prev, gallery: newGallery, image: uploadedUrls[0] };
+        }
+        return { ...prev, gallery: newGallery };
+      });
 
       // Show success message
       alert(`Successfully uploaded ${uploadedUrls.length} image(s)!`);
@@ -463,13 +466,27 @@ export default function PropertiesPage() {
     console.log('✏️ Editing property:', editingProperty);
 
     try {
+      // Get filtered gallery
+      const filteredGallery = galleryImages.filter(img => img.trim() !== "");
+
+      // Ensure featured image is set - use formData.image if set, otherwise use first gallery image
+      const featuredImage = formData.image || (filteredGallery.length > 0 ? filteredGallery[0] : '');
+
+      console.log('📸 Image data:', {
+        formDataImage: formData.image,
+        featuredImage,
+        galleryCount: filteredGallery.length,
+        gallery: filteredGallery
+      });
+
       // Format the data properly for storage
       const propertyData = {
         ...formData,
+        image: featuredImage,
         price: `$${formData.price}/month`,
         size: `${formData.size} sq ft`,
         location: formData.city ? `${formData.city}${formData.county ? ', ' + formData.county : ''}, FL` : '',
-        gallery: galleryImages.filter(img => img.trim() !== "")
+        gallery: filteredGallery
       };
 
       if (editingProperty) {
