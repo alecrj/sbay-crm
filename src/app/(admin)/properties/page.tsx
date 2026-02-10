@@ -551,10 +551,16 @@ export default function PropertiesPage() {
             console.log(`✏️ Updating ${existingUnits.length} existing units...`);
 
             for (const unit of existingUnits) {
+              // Use galleryImages if gallery is empty (they should be synced but just in case)
+              const unitGallery = unit.gallery?.length > 0 ? unit.gallery : unit.galleryImages || [];
+              const unitImage = unit.image || (unitGallery.length > 0 ? unitGallery[0] : '');
+
               console.log(`📸 Updating unit "${unit.title}" images:`, {
-                image: unit.image,
-                galleryCount: unit.gallery?.length || 0,
-                gallery: unit.gallery
+                originalImage: unit.image,
+                originalGallery: unit.gallery,
+                galleryImages: unit.galleryImages,
+                resolvedImage: unitImage,
+                resolvedGallery: unitGallery
               });
 
               const unitData = {
@@ -570,9 +576,11 @@ export default function PropertiesPage() {
                 description: unit.description,
                 available: unit.available,
                 features: unit.features,
-                image: unit.image,
-                gallery: unit.gallery
+                image: unitImage,
+                gallery: unitGallery
               };
+
+              console.log(`📤 Sending unit update for ${unit.id}:`, { image: unitImage, galleryCount: unitGallery.length });
 
               const unitResponse = await fetch(`/api/properties?id=${unit.id}`, {
                 method: 'PUT',
@@ -582,10 +590,14 @@ export default function PropertiesPage() {
                 body: JSON.stringify(unitData)
               });
 
+              const unitResult = await unitResponse.json();
               if (!unitResponse.ok) {
-                console.error(`Failed to update unit: ${unit.title}`);
+                console.error(`Failed to update unit: ${unit.title}`, unitResult);
               } else {
-                console.log(`✅ Unit updated: ${unit.title}`);
+                console.log(`✅ Unit updated: ${unit.title}`, {
+                  savedImage: unitResult.property?.image,
+                  savedGalleryCount: unitResult.property?.gallery?.length
+                });
               }
             }
           }
