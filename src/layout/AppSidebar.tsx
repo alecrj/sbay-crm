@@ -42,20 +42,14 @@ const navItems: NavItem[] = [
     path: "/leads",
   },
   {
-    icon: <CalenderIcon />,
-    name: "Appointments",
-    path: "/appointments",
-    adminOnly: true,
-  },
-  {
     icon: <BoxIcon />,
     name: "Properties",
     path: "/properties",
   },
   {
-    icon: <CalenderIcon />,
-    name: "Property Calendars",
-    path: "/property-calendars",
+    icon: <BoxIcon />,
+    name: "Property Leads",
+    path: "/property-leads",
     adminOnly: true,
   },
   {
