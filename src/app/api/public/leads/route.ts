@@ -229,8 +229,7 @@ export async function POST(request: NextRequest) {
 
     // Send notification email to admin
     try {
-      // TODO: Change back to info@shallowbayadvisors.com after testing
-      const adminEmail = process.env.ADMIN_EMAIL || '99alecrodriguez@gmail.com';
+      const adminEmail = process.env.ADMIN_EMAIL || 'info@shallowbayadvisors.com';
       console.log('Sending admin notification to:', adminEmail);
 
       const adminEmailResult = await resend.emails.send({
