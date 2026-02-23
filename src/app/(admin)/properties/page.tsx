@@ -1063,10 +1063,15 @@ export default function PropertiesPage() {
                           </label>
                           <div className="relative">
                             <input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               required
                               value={formData.size}
-                              onChange={(e) => setFormData({...formData, size: e.target.value})}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9]/g, '');
+                                setFormData({...formData, size: value});
+                              }}
                               className="w-full pr-16 py-2 px-3 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                               placeholder="10000"
                             />
@@ -1080,11 +1085,15 @@ export default function PropertiesPage() {
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">$</span>
                             <input
-                              type="number"
-                              step="0.01"
+                              type="text"
+                              inputMode="decimal"
+                              pattern="[0-9.]*"
                               required
                               value={formData.price}
-                              onChange={(e) => setFormData({...formData, price: e.target.value})}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                                setFormData({...formData, price: value});
+                              }}
                               className="w-full pl-8 pr-20 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                               placeholder="5000"
                             />
@@ -1139,10 +1148,15 @@ export default function PropertiesPage() {
                                   Square Footage *
                                 </label>
                                 <input
-                                  type="number"
+                                  type="text"
+                                  inputMode="numeric"
+                                  pattern="[0-9]*"
                                   required
                                   value={unit.size}
-                                  onChange={(e) => updateUnit(index, 'size', e.target.value)}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9]/g, '');
+                                    updateUnit(index, 'size', value);
+                                  }}
                                   placeholder="5000"
                                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
@@ -1154,11 +1168,15 @@ export default function PropertiesPage() {
                                   Monthly Lease Rate *
                                 </label>
                                 <input
-                                  type="number"
-                                  step="0.01"
+                                  type="text"
+                                  inputMode="decimal"
+                                  pattern="[0-9.]*"
                                   required
                                   value={unit.price}
-                                  onChange={(e) => updateUnit(index, 'price', e.target.value)}
+                                  onChange={(e) => {
+                                    const value = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                                    updateUnit(index, 'price', value);
+                                  }}
                                   placeholder="5000"
                                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
