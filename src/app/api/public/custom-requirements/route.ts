@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       console.log('Sending admin notification for custom requirements');
 
       await resend.emails.send({
-        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
+        from: 'Shallow Bay Advisors <noreply@shallowbayadvisors.com>',
         to: [process.env.ADMIN_EMAIL!],
         subject: 'New Custom Requirements Submission - Shallow Bay Advisors',
         html: `

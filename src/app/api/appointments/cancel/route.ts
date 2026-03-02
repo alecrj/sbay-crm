@@ -258,7 +258,7 @@ export async function GET(request: NextRequest) {
       };
 
       await resend.emails.send({
-        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
+        from: 'Shallow Bay Advisors <noreply@shallowbayadvisors.com>',
         to: [process.env.ADMIN_EMAIL!],
         subject: 'Tour Cancelled - Shallow Bay Advisors',
         html: `

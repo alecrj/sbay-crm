@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       console.log('Sending confirmation email to:', email);
 
       const confirmEmailResult = await resend.emails.send({
-        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
+        from: 'Shallow Bay Advisors <noreply@shallowbayadvisors.com>',
         to: [email],
         subject: 'Tour Request Received - Shallow Bay Advisors',
         html: `
@@ -233,7 +233,7 @@ export async function POST(request: NextRequest) {
       console.log('Sending admin notification to:', adminEmail);
 
       const adminEmailResult = await resend.emails.send({
-        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
+        from: 'Shallow Bay Advisors <noreply@shallowbayadvisors.com>',
         to: [adminEmail],
         subject: `New Tour Request - ${first_name} ${last_name}`,
         html: `

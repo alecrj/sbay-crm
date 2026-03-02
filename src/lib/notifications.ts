@@ -328,8 +328,7 @@ export class NotificationService {
     notificationId?: string
   ): Promise<boolean> {
     const provider = process.env.EMAIL_PROVIDER || 'resend';
-    // Temporarily hardcode working email for testing
-    const fromEmail = 'onboarding@resend.dev';
+    const fromEmail = 'noreply@shallowbayadvisors.com';
 
     try {
       let result: any;
@@ -424,7 +423,7 @@ export class NotificationService {
         return { success: false, resendResponse: null, error: 'Resend not configured' };
       }
       const result = await resendInstance.emails.send({
-        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
+        from: 'Shallow Bay Advisors <noreply@shallowbayadvisors.com>',
         to: [to],
         subject: 'Email Delivery Test - Shallow Bay Advisors',
         html: `<p>This is a delivery test to <strong>${to}</strong> at ${new Date().toISOString()}</p>`,
