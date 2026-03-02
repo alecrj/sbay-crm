@@ -369,6 +369,9 @@ export class NotificationService {
             text
           });
           console.log('Resend full response:', JSON.stringify(result, null, 2));
+          if (result.error) {
+            throw new Error(`Resend error: ${result.error.message || JSON.stringify(result.error)}`);
+          }
           break;
       }
 
@@ -408,6 +411,32 @@ export class NotificationService {
       }
 
       return false;
+    }
+  }
+
+  /**
+   * Send a raw test email and return the full Resend response for diagnostics
+   */
+  static async sendTestEmailRaw(to: string): Promise<{ success: boolean; resendResponse: any; error?: string }> {
+    try {
+      const resendInstance = getResend();
+      if (!resendInstance) {
+        return { success: false, resendResponse: null, error: 'Resend not configured' };
+      }
+      const result = await resendInstance.emails.send({
+        from: 'Shallow Bay Advisors <onboarding@resend.dev>',
+        to: [to],
+        subject: 'Email Delivery Test - Shallow Bay Advisors',
+        html: `<p>This is a delivery test to <strong>${to}</strong> at ${new Date().toISOString()}</p>`,
+        text: `Delivery test to ${to} at ${new Date().toISOString()}`
+      });
+      return {
+        success: !result.error,
+        resendResponse: result,
+        error: result.error ? (result.error as any).message || JSON.stringify(result.error) : undefined
+      };
+    } catch (err: any) {
+      return { success: false, resendResponse: null, error: err.message };
     }
   }
 

@@ -11,10 +11,19 @@ export async function POST(request: NextRequest) {
 
     console.log('Testing email to:', email, 'Type:', type);
 
+    // Use raw diagnostic method to see exact Resend response
+    if (type === 'diagnostic') {
+      const result = await NotificationService.sendTestEmailRaw(email);
+      return NextResponse.json({
+        ...result,
+        to: email,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     let success = false;
 
     if (type === 'lead') {
-      // Test lead notification
       const testLeadData = {
         id: 'test-lead-id',
         name: 'Test Lead',
@@ -25,59 +34,27 @@ export async function POST(request: NextRequest) {
         priority: 'high',
         property_interest: 'Office Space'
       };
-
-      success = await NotificationService.sendNewLeadNotificationToAdmin(
-        testLeadData,
-        email
-      );
+      success = await NotificationService.sendNewLeadNotificationToAdmin(testLeadData, email);
     } else {
-      // Test basic email
       success = await NotificationService.sendEmail(
         email,
         'Test Email from Shallow Bay CRM',
-        `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>🎉 Test Email Success!</h2>
-          <p>Hello there,</p>
-          <p>This is a test email from your Shallow Bay CRM system. If you're receiving this, your email system is working correctly!</p>
-          <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3>✅ System Status</h3>
-            <p><strong>Email Provider:</strong> ${process.env.EMAIL_PROVIDER || 'resend'}</p>
-            <p><strong>From Address:</strong> ${process.env.EMAIL_FROM || 'noreply@yourdomain.com'}</p>
-            <p><strong>Test Time:</strong> ${new Date().toLocaleString()}</p>
-          </div>
-          <p>Best regards,<br>Your CRM System</p>
-        </div>
-        `,
-        `Test Email Success!
-
-Hello there,
-
-This is a test email from your Shallow Bay CRM system. If you're receiving this, your email system is working correctly!
-
-System Status:
-- Email Provider: ${process.env.EMAIL_PROVIDER || 'resend'}
-- From Address: ${process.env.EMAIL_FROM || 'noreply@yourdomain.com'}
-- Test Time: ${new Date().toLocaleString()}
-
-Best regards,
-Your CRM System`
+        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Test Email</h2>
+          <p>This is a test email to <strong>${email}</strong>.</p>
+          <p><strong>Provider:</strong> ${process.env.EMAIL_PROVIDER || 'resend'}</p>
+          <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
+        </div>`,
+        `Test email to ${email} at ${new Date().toLocaleString()}`
       );
     }
 
-    if (success) {
-      return NextResponse.json({
-        success: true,
-        message: `Test email sent successfully to ${email}`,
-        provider: process.env.EMAIL_PROVIDER || 'resend',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to send test email'
-      }, { status: 500 });
-    }
+    return NextResponse.json({
+      success,
+      message: success ? `Email sent to ${email}` : `Failed to send to ${email}`,
+      provider: process.env.EMAIL_PROVIDER || 'resend',
+      timestamp: new Date().toISOString()
+    }, { status: success ? 200 : 500 });
 
   } catch (error) {
     console.error('Error in test email endpoint:', error);
