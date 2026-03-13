@@ -457,13 +457,25 @@ export class NotificationService {
 
       const template = emailTemplates.newLeadAdmin(templateData);
 
-      // Send email directly (skip database logging for now)
-      return await this.sendEmail(
+      // Send to primary admin email
+      const primarySent = await this.sendEmail(
         adminEmail,
         template.subject,
         template.html,
         template.text
       );
+
+      // Also send to backup email so leads are never missed
+      const backupEmail = process.env.BACKUP_NOTIFICATION_EMAIL;
+      if (backupEmail && backupEmail !== adminEmail) {
+        try {
+          await this.sendEmail(backupEmail, template.subject, template.html, template.text);
+        } catch (e) {
+          console.error('Backup notification failed:', e);
+        }
+      }
+
+      return primarySent;
 
     } catch (error) {
       console.error('Error sending new lead notification to admin:', error);
