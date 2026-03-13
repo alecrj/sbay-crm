@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NotificationService } from '@/lib/notifications';
+import { Resend } from 'resend';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, type = 'test' } = await request.json();
+    const { email, type = 'test', emailId } = await request.json();
+
+    // Check delivery status of a previously sent email
+    if (type === 'status' && emailId) {
+      const resend = new Resend(process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY);
+      const emailData = await resend.emails.get(emailId);
+      return NextResponse.json({
+        emailId,
+        ...emailData,
+        timestamp: new Date().toISOString()
+      });
+    }
 
     if (!email) {
       return NextResponse.json({ error: 'Email address required' }, { status: 400 });
@@ -70,7 +82,6 @@ export async function GET(request: NextRequest) {
   const provider = process.env.EMAIL_PROVIDER || 'resend';
   const fromEmail = process.env.EMAIL_FROM || process.env.GMAIL_USER || 'noreply@yourdomain.com';
 
-  // Check if API key is configured
   let apiKeyConfigured = false;
   if (provider === 'resend') {
     apiKeyConfigured = !!(process.env.RESEND_API_KEY || process.env.EMAIL_API_KEY);
