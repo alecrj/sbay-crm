@@ -28,10 +28,10 @@ export async function uploadPropertyImages(files: File[]): Promise<string[]> {
 
       // Optimize/compress image
       const options = {
-        maxSizeMB: 2,           // Target max file size after compression
-        maxWidthOrHeight: 2000, // Max dimension for high-quality display
+        maxSizeMB: 5,           // Target max file size after compression
+        maxWidthOrHeight: 3840, // Max dimension (4K resolution)
         useWebWorker: true,     // Use web worker for better performance
-        quality: 0.85,          // Quality setting (0-1)
+        quality: 0.95,          // High quality to keep images crisp
         fileType: file.type,    // Maintain original format
       };
 
