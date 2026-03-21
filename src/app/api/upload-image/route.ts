@@ -10,7 +10,7 @@ const supabase = createClient(
 
 const TARGET_WIDTH = 1920;
 const MIN_WIDTH = 1200;
-const JPEG_QUALITY = 85;
+const JPEG_QUALITY = 95;
 
 export async function POST(request: NextRequest) {
   try {
