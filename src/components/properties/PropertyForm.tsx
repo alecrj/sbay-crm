@@ -5,6 +5,7 @@ import { supabase, Property } from "@/lib/supabase";
 import Image from "next/image";
 import PropertyPreview from "./PropertyPreview";
 import ImageDropZone from "./ImageDropZone";
+import { uploadPropertyImages } from "@/lib/image-upload";
 
 interface PropertyFormProps {
   property?: Property | null;
@@ -214,87 +215,8 @@ const PropertyForm: React.FC<PropertyFormProps> = ({ property, onSave, onCancel 
     setUploadingImage(true);
 
     try {
-      const uploadPromises = files.map(async (file, index) => {
-        console.log(`Uploading file ${index + 1}: ${file.name}, size: ${file.size}, type: ${file.type}`);
-
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          throw new Error(`${file.name} is not an image file`);
-        }
-
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          throw new Error(`${file.name} must be less than 5MB`);
-        }
-
-        // Create a unique filename with timestamp and random string
-        const fileExt = file.name.split('.').pop();
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2);
-        const fileName = `${timestamp}-${randomStr}.${fileExt}`;
-        const filePath = `properties/${fileName}`;
-
-        console.log(`Uploading to path: ${filePath}`);
-
-        // Check if bucket exists first
-        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-        if (bucketsError) {
-          console.error('Error listing buckets:', bucketsError);
-        } else {
-          console.log('Available buckets:', buckets.map(b => b.name));
-        }
-
-        // Try to upload to Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('property-images')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Supabase upload error:', uploadError);
-
-          // If bucket doesn't exist, try to create it
-          if (uploadError.message.includes('Bucket not found')) {
-            console.log('Bucket not found, attempting to create...');
-            const { error: createBucketError } = await supabase.storage.createBucket('property-images', {
-              public: true
-            });
-
-            if (createBucketError) {
-              console.error('Failed to create bucket:', createBucketError);
-              throw new Error(`Failed to upload ${file.name}: Bucket creation failed - ${createBucketError.message}`);
-            }
-
-            // Try upload again after creating bucket
-            const { data: retryUploadData, error: retryUploadError } = await supabase.storage
-              .from('property-images')
-              .upload(filePath, file, {
-                cacheControl: '3600',
-                upsert: false
-              });
-
-            if (retryUploadError) {
-              throw new Error(`Failed to upload ${file.name} after bucket creation: ${retryUploadError.message}`);
-            }
-          } else {
-            throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
-          }
-        }
-
-        console.log('Upload successful:', uploadData);
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from('property-images')
-          .getPublicUrl(filePath);
-
-        console.log('Generated public URL:', urlData.publicUrl);
-        return urlData.publicUrl;
-      });
-
-      const uploadedUrls = await Promise.all(uploadPromises);
+      // Route all uploads through the API for Sharp processing
+      const uploadedUrls = await uploadPropertyImages(files);
       console.log('All uploads completed:', uploadedUrls);
 
       // Add new images to gallery and form data

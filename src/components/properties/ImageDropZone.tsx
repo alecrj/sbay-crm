@@ -50,7 +50,7 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
       "image/gif": [".gif"],
     },
     multiple: true,
-    maxSize: 5 * 1024 * 1024, // 5MB
+    maxSize: 10 * 1024 * 1024, // 10MB
     // Remove maxFiles restriction to allow multiple selection, we'll handle limits in onDrop
   });
 
@@ -102,7 +102,7 @@ const ImageDropZone: React.FC<ImageDropZoneProps> = ({
             </h4>
 
             <p className="mb-4 max-w-sm text-sm text-gray-600 dark:text-gray-400">
-              Drop multiple images here or click to browse. Supports PNG, JPG, WebP, GIF up to 5MB each. Maximum 12 images per property.
+              Drop multiple images here or click to browse. Supports PNG, JPG, WebP, GIF up to 10MB each. Maximum 12 images per property.
             </p>
 
             {galleryImages.length > 0 && (

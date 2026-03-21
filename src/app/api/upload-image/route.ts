@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import sharp from 'sharp';
 
 // Use service role client for uploads (bypasses RLS and doesn't have token expiration issues)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const TARGET_WIDTH = 1920;
+const MIN_WIDTH = 1200;
+const JPEG_QUALITY = 85;
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,20 +40,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    // Convert File to Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const inputBuffer = Buffer.from(arrayBuffer);
+
+    // Process image with Sharp
+    const metadata = await sharp(inputBuffer).metadata();
+    const originalWidth = metadata.width || 0;
+
+    let resizeWidth: number;
+    if (originalWidth >= TARGET_WIDTH) {
+      // Large image: downscale to target
+      resizeWidth = TARGET_WIDTH;
+    } else if (originalWidth < MIN_WIDTH) {
+      // Small image: upscale to minimum
+      resizeWidth = MIN_WIDTH;
+    } else {
+      // Already in good range, keep original width
+      resizeWidth = originalWidth;
+    }
+
+    const processedBuffer = await sharp(inputBuffer)
+      .resize(resizeWidth, null, {
+        withoutEnlargement: false,
+        kernel: sharp.kernel.lanczos3,
+        fit: 'inside',
+      })
+      .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
+      .toBuffer();
+
+    console.log(`Image processed: ${originalWidth}px → ${resizeWidth}px, ${(inputBuffer.length / 1024).toFixed(0)}KB → ${(processedBuffer.length / 1024).toFixed(0)}KB`);
+
+    // Generate unique filename (always .jpg since we convert to JPEG)
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.jpg`;
     const filePath = `properties/${fileName}`;
 
-    // Convert File to Buffer for server-side upload
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Upload to Supabase Storage
+    // Upload processed image to Supabase Storage
     const { error: uploadError } = await supabase.storage
       .from('property-images')
-      .upload(filePath, buffer, {
-        contentType: file.type,
+      .upload(filePath, processedBuffer, {
+        contentType: 'image/jpeg',
         cacheControl: '3600',
         upsert: false,
       });
