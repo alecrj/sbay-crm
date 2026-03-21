@@ -9,7 +9,6 @@ const supabase = createClient(
 );
 
 const TARGET_WIDTH = 1920;
-const MIN_WIDTH = 1200;
 const JPEG_QUALITY = 95;
 
 export async function POST(request: NextRequest) {
@@ -48,17 +47,8 @@ export async function POST(request: NextRequest) {
     const metadata = await sharp(inputBuffer).metadata();
     const originalWidth = metadata.width || 0;
 
-    let resizeWidth: number;
-    if (originalWidth >= TARGET_WIDTH) {
-      // Large image: downscale to target
-      resizeWidth = TARGET_WIDTH;
-    } else if (originalWidth < MIN_WIDTH) {
-      // Small image: upscale to minimum
-      resizeWidth = MIN_WIDTH;
-    } else {
-      // Already in good range, keep original width
-      resizeWidth = originalWidth;
-    }
+    // Always resize to TARGET_WIDTH for consistent retina-ready quality
+    const resizeWidth = TARGET_WIDTH;
 
     const processedBuffer = await sharp(inputBuffer)
       .resize(resizeWidth, null, {
